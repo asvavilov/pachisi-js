@@ -11,105 +11,170 @@ Array.prototype.last = function() {
 	return this[this.length-1];
 }
 
+// рассто€ние между пользовател€ми
 var q = 17;
+
+// фишка
 var Chip = function(player) {
+	// св€зь с игроком
 	this.player = player;
+	// св€зь с €чейкой
+	this.cell = null;
+	var self = this;
+	// переход фишки к €чейке
+	// !!! проверки на возможность перехода должны осуществл€тьс€ ранее
+	this.go = function(to_cell) {
+		if (self.cell) {
+			for (var i = 0; i < self.cell.places.length; i++) {
+				if (self.cell.places[i] == self) {
+					self.cell.places[i] = null;
+					break;
+				}
+			}
+		}
+		self.cell = to_cell;
+		for (var i = 0; i < self.cell.places.length; i++) {
+			if (!self.cell.places[i]) {
+				self.cell.places[i] = self;
+				break;
+			}
+		}
+	}
 };
+
+// игрок
 var Player = function(ind, ai, color) {
+	// глобальный номер игрока
 	this.ind = ind;
+	// номер стартовой дл€ текущего игрока €чейки на общей доске
 	this.i_begin = q * ind;
+	// номер конечной дл€ текущего игрока €чейки на общей доске
 	this.i_end = q * ind + 63;
+	// компьютер или человек (Artifical Intelligent)
 	this.ai = ai;
+	// цвет игрока
 	this.color = color;
+	// фишки игрока
 	this.chips = [
 		new Chip(this),
 		new Chip(this),
 		new Chip(this),
 		new Chip(this),
 	];
+	// доски игрока
 	this.boards = [
 		new Board(0, this, 1, null, null, {0: 4}),
 		null,
 		new Board(2, this, 8, null, null, {7: 4})
 	];
+	// расставл€ем фишки
+	var self = this;
+	this.chips.forEach(function(ch){
+		ch.go(self.boards[0].cells[0]);
+	});
 };
+
+// €чейка доски
 var Cell = function(board, safe, io, size) {
 	this.board = board;
+	// флаг островка безопасности
 	this.safe = safe || false;
+	// св€занна€ €чейка перехода (input/output)
 	this.io = io || null;
+	// кол-во мест в €чейке
 	this.size = size || 2;
+	// места в €чейке
 	this.places = [];
 	for (var i = 0; i < this.size; i++) {
 		this.places.push(null);
 	}
 };
+
+// доска
 var Board = function(ind, player, len, safes, ios, sizes) {
+	// глобальный индекс доски
 	this.ind = ind;
+	// св€зь с игроком, если нужно
 	this.player = player;
+	// €чейки доски
 	this.cells = [];
+	// безопасные €чейки
 	safes = safes || {};
+	// переходные €чейки
 	ios = ios || {};
+	// размеры €чеек
 	sizes = sizes || {};
 	for (var i = 0; i < len; i++) {
 		this.cells.push(new Cell(this, safes[i], ios[i], sizes[i]));
 	};
 };
+
+// массив игроков
 var players = [
 	new Player(0, false, 'green'),
 	new Player(1, true, 'yellow'),
 	new Player(2, true, 'red'),
 	new Player(3, true, 'blue'),
 ];
-var board;
 
-$(function(){
-	var safes = {
-		0: players[0],
-		7: true,
-		12: true,
-		17: players[1],
-		24: true,
-		29: true,
-		34: players[2],
-		41: true,
-		46: true,
-		51: players[3],
-		58: true,
-		63: true
-	};
-	var ios = {
-		0: players[0].boards[0].cells.last(),
-		12: players[1].boards[2].cells.first(),
-		17: players[1].boards[0].cells.last(),
-		29: players[2].boards[2].cells.first(),
-		34: players[2].boards[0].cells.last(),
-		46: players[3].boards[2].cells.first(),
-		51: players[3].boards[0].cells.last(),
-		63: players[0].boards[2].cells.first()
-	};
-	board = new Board(1, null, 68, safes, ios);
-	players.forEach(function(player){
-		player.boards[0].cells.last().io = board.cells[player.i_begin];
-		player.boards[1] = board;
-		player.boards[2].cells.first().io = board.cells[player.i_end];
-	});
+// карта €чеек безопасности
+var safes = {
+	0: players[0],
+	7: true,
+	12: true,
+	17: players[1],
+	24: true,
+	29: true,
+	34: players[2],
+	41: true,
+	46: true,
+	51: players[3],
+	58: true,
+	63: true
+};
 
-	
+// карта €чеек-переходов
+var ios = {
+	0: players[0].boards[0].cells.last(),
+	12: players[1].boards[2].cells.first(),
+	17: players[1].boards[0].cells.last(),
+	29: players[2].boards[2].cells.first(),
+	34: players[2].boards[0].cells.last(),
+	46: players[3].boards[2].cells.first(),
+	51: players[3].boards[0].cells.last(),
+	63: players[0].boards[2].cells.first()
+};
 
-	// drawing...
+//обща€ глобальна€ доска
+var board = new Board(1, null, 68, safes, ios);
+
+// св€зь игорков с общей доской и св€зи €чеек-преходов с общей доской
+players.forEach(function(player){
+	player.boards[0].cells.last().io = board.cells[player.i_begin];
+	player.boards[1] = board;
+	player.boards[2].cells.first().io = board.cells[player.i_end];
+});
+
+// ...
+
+// перерисовка
+function paint() {
 	var $board_cells = $('#board_cells');
-	var $tpl_cell = $('#tpl_cell');
-	var $tpl_cell_clone = $tpl_cell.clone(true, true).show();
-	$tpl_cell.remove();
-	var $tpl_place = $tpl_cell_clone.find('.place');
-	var $tpl_place_clone = $tpl_place.clone(true, true).show();
-	$tpl_place.remove();
+	$board_cells.html('');
+	var $tpl_cell = $('#tpl_cell').clone(true, true).removeAttr('id');
+	var $tpl_place_tpl = $tpl_cell.find('.place');
+	var $tpl_place = $tpl_place_tpl.clone(true, true).show();
+	$tpl_place_tpl.remove();
 	board.cells.forEach(function(cell){
-		var $cell = $tpl_cell_clone.clone(true, true);
+		var $cell = $tpl_cell.clone(true, true);
 		var $places = $cell.find('.place-cells');
-		var $place = $tpl_place_clone.clone(true, true);
+		var $place = $tpl_place.clone(true, true);
 		for (var i = 0; i < cell.size; i++) {
-			$places.append($place.clone(true, true).addClass('place_'+i));
+			var pl = $place.clone(true, true).addClass('place_'+i);
+			if (cell.places[i]) {
+				pl.addClass('chip-'+cell.places[i].player.color);
+			}
+			$places.append(pl);
 		}
 		if (cell.safe) {
 			$cell.addClass('safe');
@@ -120,15 +185,24 @@ $(function(){
 		if (cell.io) {
 			var $subboard = $cell.find('.cell-'+['in', '', 'out'][cell.io.board.ind]);
 			cell.io.board.cells.forEach(function(cell2){
-				var $subcell = $tpl_cell_clone.find('.place-cells').clone(true, true).css('backgroundColor', cell.io.board.player.color);
+				var $subcell = $tpl_cell.find('.place-cells').clone(true, true).css('backgroundColor', cell.io.board.player.color);
 				for (var i = 0; i < cell2.size; i++) {
-					$subcell.append($tpl_place_clone.clone(true, true).addClass('place_'+i));
+					var pl = $tpl_place.clone(true, true).addClass('place_'+i);
+					if (cell2.places[i]) {
+						pl.addClass('chip-'+cell2.places[i].player.color);
+					}
+					$subcell.append(pl);
 				}
 				$subboard.append($subcell);
 			});
 		}
 		$board_cells.append($cell);
 	});
+}
+
+$(function(){
+	// drawing...
+	paint();
 });
 
 </script>
@@ -175,17 +249,35 @@ $(function(){
 	margin: 2px 20%;
 	background-color: #fff;
 }
+#board_cells li .place-cells div.chip-green {
+	border: 1px solid white;
+	background-color: green;
+}
+#board_cells li .place-cells div.chip-yellow {
+	border: 1px solid white;
+	background-color: yellow;
+}
+#board_cells li .place-cells div.chip-red {
+	border: 1px solid white;
+	background-color: red;
+}
+#board_cells li .place-cells div.chip-blue {
+	border: 1px solid white;
+	background-color: blue;
+}
 </style>
 </head>
 <body>
-	<ul id="board_cells">
-		<li id="tpl_cell" style="display: none;">
+	<ul id="tpl_board_cells" style="display: none;">
+		<li id="tpl_cell">
 			<div class="cell-in"></div>
 			<div class="place-cells">
 				<div class="place" style="display: none;"></div>
 			</div>
 			<div class="cell-out"></div>
 		</li>
+	</ul>
+	<ul id="board_cells">
 	</ul>
 </body>
 </html>
