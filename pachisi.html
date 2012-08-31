@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+п»ї<!DOCTYPE html>
 <html>
 <head>
 <title>Pachisi</title>
@@ -11,7 +11,7 @@ Array.prototype.last = function() {
 	return this[this.length-1];
 }
 
-// расстояние между пользователями
+// СЂР°СЃСЃС‚РѕСЏРЅРёРµ РјРµР¶РґСѓ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏРјРё
 var q = 17;
 
 var Dice = function() {
@@ -24,15 +24,15 @@ var Dice = function() {
 	}
 }
 
-// фишка
+// С„РёС€РєР°
 var Chip = function(player) {
-	// связь с игроком
+	// СЃРІСЏР·СЊ СЃ РёРіСЂРѕРєРѕРј
 	this.player = player;
-	// связь с ячейкой
+	// СЃРІСЏР·СЊ СЃ СЏС‡РµР№РєРѕР№
 	this.cell = null;
 	var self = this;
-	// переход фишки к ячейке
-	// !!! проверки на возможность перехода должны осуществляться ранее
+	// РїРµСЂРµС…РѕРґ С„РёС€РєРё Рє СЏС‡РµР№РєРµ
+	// !!! РїСЂРѕРІРµСЂРєРё РЅР° РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊ РїРµСЂРµС…РѕРґР° РґРѕР»Р¶РЅС‹ РѕСЃСѓС‰РµСЃС‚РІР»СЏС‚СЊСЃСЏ СЂР°РЅРµРµ
 	this.go = function(to_cell) {
 		if (self.cell) {
 			for (var i = 0; i < self.cell.places.length; i++) {
@@ -52,74 +52,74 @@ var Chip = function(player) {
 	}
 };
 
-// игрок
+// РёРіСЂРѕРє
 var Player = function(ind, ai, color) {
-	// глобальный номер игрока
+	// РіР»РѕР±Р°Р»СЊРЅС‹Р№ РЅРѕРјРµСЂ РёРіСЂРѕРєР°
 	this.ind = ind;
-	// номер стартовой для текущего игрока ячейки на общей доске
+	// РЅРѕРјРµСЂ СЃС‚Р°СЂС‚РѕРІРѕР№ РґР»СЏ С‚РµРєСѓС‰РµРіРѕ РёРіСЂРѕРєР° СЏС‡РµР№РєРё РЅР° РѕР±С‰РµР№ РґРѕСЃРєРµ
 	this.i_begin = q * ind;
-	// номер конечной для текущего игрока ячейки на общей доске
+	// РЅРѕРјРµСЂ РєРѕРЅРµС‡РЅРѕР№ РґР»СЏ С‚РµРєСѓС‰РµРіРѕ РёРіСЂРѕРєР° СЏС‡РµР№РєРё РЅР° РѕР±С‰РµР№ РґРѕСЃРєРµ
 	this.i_end = q * ind + 63;
-	// компьютер или человек (Artifical Intelligent)
+	// РєРѕРјРїСЊСЋС‚РµСЂ РёР»Рё С‡РµР»РѕРІРµРє (Artifical Intelligent)
 	this.ai = ai;
-	// цвет игрока
+	// С†РІРµС‚ РёРіСЂРѕРєР°
 	this.color = color;
-	// фишки игрока
+	// С„РёС€РєРё РёРіСЂРѕРєР°
 	this.chips = [
 		new Chip(this),
 		new Chip(this),
 		new Chip(this),
 		new Chip(this),
 	];
-	// доски игрока
+	// РґРѕСЃРєРё РёРіСЂРѕРєР°
 	this.boards = [
 		new Board(0, this, 1, null, null, {0: 4}),
 		null,
 		new Board(2, this, 8, null, null, {7: 4})
 	];
-	// расставляем фишки
+	// СЂР°СЃСЃС‚Р°РІР»СЏРµРј С„РёС€РєРё
 	var self = this;
 	this.chips.forEach(function(ch){
 		ch.go(self.boards[0].cells[0]);
 	});
 };
 
-// ячейка доски
+// СЏС‡РµР№РєР° РґРѕСЃРєРё
 var Cell = function(board, safe, io, size) {
 	this.board = board;
-	// флаг островка безопасности
+	// С„Р»Р°Рі РѕСЃС‚СЂРѕРІРєР° Р±РµР·РѕРїР°СЃРЅРѕСЃС‚Рё
 	this.safe = safe || false;
-	// связанная ячейка перехода (input/output)
+	// СЃРІСЏР·Р°РЅРЅР°СЏ СЏС‡РµР№РєР° РїРµСЂРµС…РѕРґР° (input/output)
 	this.io = io || null;
-	// кол-во мест в ячейке
+	// РєРѕР»-РІРѕ РјРµСЃС‚ РІ СЏС‡РµР№РєРµ
 	this.size = size || 2;
-	// места в ячейке
+	// РјРµСЃС‚Р° РІ СЏС‡РµР№РєРµ
 	this.places = [];
 	for (var i = 0; i < this.size; i++) {
 		this.places.push(null);
 	}
 };
 
-// доска
+// РґРѕСЃРєР°
 var Board = function(ind, player, len, safes, ios, sizes) {
-	// глобальный индекс доски
+	// РіР»РѕР±Р°Р»СЊРЅС‹Р№ РёРЅРґРµРєСЃ РґРѕСЃРєРё
 	this.ind = ind;
-	// связь с игроком, если нужно
+	// СЃРІСЏР·СЊ СЃ РёРіСЂРѕРєРѕРј, РµСЃР»Рё РЅСѓР¶РЅРѕ
 	this.player = player;
-	// ячейки доски
+	// СЏС‡РµР№РєРё РґРѕСЃРєРё
 	this.cells = [];
-	// безопасные ячейки
+	// Р±РµР·РѕРїР°СЃРЅС‹Рµ СЏС‡РµР№РєРё
 	safes = safes || {};
-	// переходные ячейки
+	// РїРµСЂРµС…РѕРґРЅС‹Рµ СЏС‡РµР№РєРё
 	ios = ios || {};
-	// размеры ячеек
+	// СЂР°Р·РјРµСЂС‹ СЏС‡РµРµРє
 	sizes = sizes || {};
 	for (var i = 0; i < len; i++) {
 		this.cells.push(new Cell(this, safes[i], ios[i], sizes[i]));
 	};
 };
 
-// массив игроков
+// РјР°СЃСЃРёРІ РёРіСЂРѕРєРѕРІ
 var players = [
 	new Player(0, false, 'green'),
 	new Player(1, true, 'yellow'),
@@ -127,7 +127,7 @@ var players = [
 	new Player(3, true, 'blue'),
 ];
 
-// карта ячеек безопасности
+// РєР°СЂС‚Р° СЏС‡РµРµРє Р±РµР·РѕРїР°СЃРЅРѕСЃС‚Рё
 var safes = {
 	0: players[0],
 	7: true,
@@ -143,7 +143,7 @@ var safes = {
 	63: true
 };
 
-// карта ячеек-переходов
+// РєР°СЂС‚Р° СЏС‡РµРµРє-РїРµСЂРµС…РѕРґРѕРІ
 var ios = {
 	0: players[0].boards[0].cells.last(),
 	12: players[1].boards[2].cells.first(),
@@ -155,10 +155,10 @@ var ios = {
 	63: players[0].boards[2].cells.first()
 };
 
-//общая глобальная доска
+//РѕР±С‰Р°СЏ РіР»РѕР±Р°Р»СЊРЅР°СЏ РґРѕСЃРєР°
 var board = new Board(1, null, 68, safes, ios);
 
-// связь игорков с общей доской и связи ячеек-преходов с общей доской
+// СЃРІСЏР·СЊ РёРіРѕСЂРєРѕРІ СЃ РѕР±С‰РµР№ РґРѕСЃРєРѕР№ Рё СЃРІСЏР·Рё СЏС‡РµРµРє-РїСЂРµС…РѕРґРѕРІ СЃ РѕР±С‰РµР№ РґРѕСЃРєРѕР№
 players.forEach(function(player){
 	player.boards[0].cells.last().io = board.cells[player.i_begin];
 	player.boards[1] = board;
@@ -167,7 +167,7 @@ players.forEach(function(player){
 
 // ...
 
-// перерисовка
+// РїРµСЂРµСЂРёСЃРѕРІРєР°
 function paint() {
 	var $board_cells = $('#board_cells');
 	$board_cells.html('');
