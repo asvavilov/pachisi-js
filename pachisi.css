@@ -1,0 +1,59 @@
+#board_cells {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+}
+#board_cells li {
+	margin: 3px;
+	padding: 0;
+	float: left;
+	width: 10px;
+	background-color: #eee;
+}
+#board_cells li.safe {
+	background-color: #bbb;
+}
+#board_cells li div {
+	float: left;
+}
+#board_cells li .cell-in, #board_cells li .cell-out {
+	width: 100%;
+	background-color: #fff;
+	font-size: 12px;
+	font-weight: bold;
+	text-align: center;
+}
+#board_cells li .cell-in {
+	height: 70px;
+}
+#board_cells li .cell-out {
+	height: 340px;
+}
+#board_cells li .place-cells {
+	margin: 5px 0;
+	width: 100%;
+}
+#board_cells li .place-cells div {
+	width: 60%;
+	height: 10px;
+	margin: 2px 20%;
+	background-color: #fff;
+}
+#board_cells li .place-cells div.chip-green {
+	border: 1px solid white;
+	background-color: green;
+}
+#board_cells li .place-cells div.chip-yellow {
+	border: 1px solid white;
+	background-color: yellow;
+}
+#board_cells li .place-cells div.chip-red {
+	border: 1px solid white;
+	background-color: red;
+}
+#board_cells li .place-cells div.chip-blue {
+	border: 1px solid white;
+	background-color: blue;
+}
+
