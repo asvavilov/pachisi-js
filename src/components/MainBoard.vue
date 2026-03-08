@@ -1,20 +1,16 @@
 <template>
   <ul id="board_cells">
-    <li
-      v-for="cell of board.cells"
-      :class="{ safe: !!cell.safe }"
-      :style="{
-        'background-color': cell.safe?.constructor === Player ? cell.safe.color : undefined,
-      }"
-    >
+    <li v-for="(cell, idx) of board.cells" :key="idx" :class="{ safe: !!cell.safe }">
       <div v-if="cell.io?.board.ind === 0" class="cell-in">
         <div
-          v-for="cell2 of cell.io.board.cells"
+          v-for="(cell2, idx2) of cell.io.board.cells"
+          :key="idx2"
           class="place-cells"
           :style="{ 'background-color': cell.io.board.player?.color }"
         >
           <div
             v-for="placeNum of cell2.size"
+            :key="placeNum"
             class="place"
             :class="{
               [`chip-${cell2.places[placeNum - 1]?.player.color}`]: !!cell2.places[placeNum - 1],
@@ -25,6 +21,7 @@
       <div class="place-cells">
         <div
           v-for="placeNum of cell.size"
+          :key="placeNum"
           class="place"
           :class="{
             [`chip-${cell.places[placeNum - 1]?.player.color}`]: !!cell.places[placeNum - 1],
@@ -33,12 +30,14 @@
       </div>
       <div v-if="cell.io?.board.ind === 2" class="cell-out">
         <div
-          v-for="cell2 of cell.io.board.cells"
+          v-for="(cell2, idx2) of cell.io.board.cells"
+          :key="idx2"
           class="place-cells"
           :style="{ 'background-color': cell.io.board.player?.color }"
         >
           <div
             v-for="placeNum of cell2.size"
+            :key="placeNum"
             class="place"
             :class="{
               [`chip-${cell2.places[placeNum - 1]?.player.color}`]: !!cell2.places[placeNum - 1],
@@ -50,8 +49,8 @@
   </ul>
 </template>
 <script setup lang="ts">
+import { reactive } from 'vue';
 import { Board } from 'src/lib/board';
-import { Player } from 'src/lib/player';
 import { usePlayerStore } from 'src/stores/player';
 import { firstElement, lastElement } from 'src/utils/array';
 
@@ -92,7 +91,7 @@ const ios = {
 /**
  * общая глобальная доска
  */
-const board = new Board(1, undefined, 68, safes, ios);
+const board = reactive(new Board(1, undefined, 68, safes, ios));
 
 /**
  * связь игроков с общей доской и связи ячеек-переходов с общей доской
@@ -149,8 +148,8 @@ players.forEach(function (player) {
   background-color: green;
 }
 #board_cells li .place-cells div.chip-yellow {
-  border: 1px solid white;
-  background-color: yellow;
+  border: 1px solid black;
+  background-color: #ffcc00;
 }
 #board_cells li .place-cells div.chip-red {
   border: 1px solid white;

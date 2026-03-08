@@ -1,3 +1,4 @@
+import { reactive } from 'vue';
 import type { Board } from './board';
 import type { Chip } from './chip';
 import type { Player } from './player';
@@ -36,7 +37,7 @@ export class Cell {
     /**
      * места в ячейке
      */
-    this.places = [];
+    this.places = reactive([]);
     for (let i = 0; i < this.size; i++) {
       this.places.push(null);
     }
