@@ -1,68 +1,216 @@
 <template>
-  <ul id="board_cells">
-    <li
-      v-for="(cell, idx) of board.cells"
-      :key="idx"
-      :class="{ safe: !!cell.safe, highlighted: isCellHighlighted(idx) }"
-    >
-      <div v-if="cell.io?.board.ind === 0" class="cell-in">
-        <div
-          v-for="(cell2, idx2) of cell.io.board.cells"
-          :key="idx2"
-          class="place-cells"
-          :style="{ 'background-color': cell.io.board.player?.color }"
-        >
+  <div class="board-wrapper">
+    <div class="board">
+      <!-- Угол top-left -->
+      <div class="corner corner-top-left" :style="{ backgroundColor: players[0]?.color }">
+        <div class="start-cells">
           <div
-            v-for="placeNum of cell2.size"
-            :key="placeNum"
+            v-for="chip in players[0]?.boards[0]?.cells[0]?.places"
+            :key="chip?.id"
             class="place"
             :class="{
-              [`chip-${cell2.places[placeNum - 1]?.player.color}`]: !!cell2.places[placeNum - 1],
-              available: isChipAvailable(cell2.places[placeNum - 1]),
+              [`chip-${chip?.player.color}`]: !!chip,
+              available: isChipAvailable(chip),
             }"
-            :data-chip-id="cell2.places[placeNum - 1]?.id"
-            @click="onChipClick(cell2.places[placeNum - 1])"
+            @click="onChipClick(chip)"
           ></div>
         </div>
       </div>
-      <div class="place-cells">
+      <!-- Сторона top -->
+      <div class="side top">
         <div
-          v-for="placeNum of cell.size"
-          :key="placeNum"
-          class="place"
-          :class="{
-            [`chip-${cell.places[placeNum - 1]?.player.color}`]: !!cell.places[placeNum - 1],
-            available: isChipAvailable(cell.places[placeNum - 1]),
-          }"
-          :data-chip-id="cell.places[placeNum - 1]?.id"
-          @click="onChipClick(cell.places[placeNum - 1])"
-        ></div>
-      </div>
-      <div v-if="cell.io?.board.ind === 2" class="cell-out">
-        <div
-          v-for="(cell2, idx2) of cell.io.board.cells"
-          :key="idx2"
-          class="place-cells"
-          :style="{ 'background-color': cell.io.board.player?.color }"
+          v-for="idx in topIndices"
+          :key="idx"
+          class="cell"
+          :class="{ safe: !!board.cells[idx]?.safe, highlighted: isCellHighlighted(idx) }"
         >
+          <div class="cell-content">
+            <div class="place-cells">
+              <div
+                v-for="placeNum in board.cells[idx]?.size"
+                :key="placeNum"
+                class="place"
+                :class="{
+                  [`chip-${board.cells[idx]?.places[placeNum - 1]?.player.color}`]:
+                    !!board.cells[idx]?.places[placeNum - 1],
+                  available: isChipAvailable(board.cells[idx]?.places[placeNum - 1]),
+                }"
+                :data-chip-id="board.cells[idx]?.places[placeNum - 1]?.id"
+                @click="onChipClick(board.cells[idx]?.places[placeNum - 1])"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Угол top-right -->
+      <div class="corner corner-top-right" :style="{ backgroundColor: players[1]?.color }">
+        <div class="start-cells">
           <div
-            v-for="placeNum of cell2.size"
-            :key="placeNum"
+            v-for="chip in players[1]?.boards[0]?.cells[0]?.places"
+            :key="chip?.id"
             class="place"
             :class="{
-              [`chip-${cell2.places[placeNum - 1]?.player.color}`]: !!cell2.places[placeNum - 1],
-              available: isChipAvailable(cell2.places[placeNum - 1]),
+              [`chip-${chip?.player.color}`]: !!chip,
+              available: isChipAvailable(chip),
             }"
-            :data-chip-id="cell2.places[placeNum - 1]?.id"
-            @click="onChipClick(cell2.places[placeNum - 1])"
+            @click="onChipClick(chip)"
           ></div>
         </div>
       </div>
-    </li>
-  </ul>
+      <!-- Сторона left -->
+      <div class="side left">
+        <div
+          v-for="idx in leftIndices"
+          :key="idx"
+          class="cell"
+          :class="{ safe: !!board.cells[idx]?.safe, highlighted: isCellHighlighted(idx) }"
+        >
+          <div class="cell-content">
+            <div class="place-cells">
+              <div
+                v-for="placeNum in board.cells[idx]?.size"
+                :key="placeNum"
+                class="place"
+                :class="{
+                  [`chip-${board.cells[idx]?.places[placeNum - 1]?.player.color}`]:
+                    !!board.cells[idx]?.places[placeNum - 1],
+                  available: isChipAvailable(board.cells[idx]?.places[placeNum - 1]),
+                }"
+                :data-chip-id="board.cells[idx]?.places[placeNum - 1]?.id"
+                @click="onChipClick(board.cells[idx]?.places[placeNum - 1])"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Центр -->
+      <div class="center">
+        <div class="home-areas">
+          <div
+            v-for="player in homeAreasOrdered"
+            :key="player.color"
+            class="home-area"
+            :style="{ backgroundColor: player.color }"
+          >
+            <!-- дома игроков (пустые) -->
+          </div>
+        </div>
+        <!-- Финишные дорожки -->
+        <div class="finish-tracks">
+          <div
+            v-for="(finishBoard, idx) in finishBoards"
+            :key="idx"
+            class="finish-track"
+            :style="{ '--player-color': players[idx]?.color }"
+          >
+            <div
+              v-for="(cell, cellIdx) in finishBoard.cells"
+              :key="cellIdx"
+              class="finish-cell"
+              :class="{ available: isChipAvailable(cell.places[0]) }"
+              @click="onChipClick(cell.places[0])"
+            >
+              <div
+                v-for="placeNum in cell.size"
+                :key="placeNum"
+                class="place"
+                :class="{
+                  [`chip-${cell.places[placeNum - 1]?.player.color}`]: !!cell.places[placeNum - 1],
+                  available: isChipAvailable(cell.places[placeNum - 1]),
+                }"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Сторона right -->
+      <div class="side right">
+        <div
+          v-for="idx in rightIndices"
+          :key="idx"
+          class="cell"
+          :class="{ safe: !!board.cells[idx]?.safe, highlighted: isCellHighlighted(idx) }"
+        >
+          <div class="cell-content">
+            <div class="place-cells">
+              <div
+                v-for="placeNum in board.cells[idx]?.size"
+                :key="placeNum"
+                class="place"
+                :class="{
+                  [`chip-${board.cells[idx]?.places[placeNum - 1]?.player.color}`]:
+                    !!board.cells[idx]?.places[placeNum - 1],
+                  available: isChipAvailable(board.cells[idx]?.places[placeNum - 1]),
+                }"
+                :data-chip-id="board.cells[idx]?.places[placeNum - 1]?.id"
+                @click="onChipClick(board.cells[idx]?.places[placeNum - 1])"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Угол bottom-left -->
+      <div class="corner corner-bottom-left" :style="{ backgroundColor: players[3]?.color }">
+        <div class="start-cells">
+          <div
+            v-for="chip in players[3]?.boards[0]?.cells[0]?.places"
+            :key="chip?.id"
+            class="place"
+            :class="{
+              [`chip-${chip?.player.color}`]: !!chip,
+              available: isChipAvailable(chip),
+            }"
+            @click="onChipClick(chip)"
+          ></div>
+        </div>
+      </div>
+      <!-- Сторона bottom -->
+      <div class="side bottom">
+        <div
+          v-for="idx in bottomIndices"
+          :key="idx"
+          class="cell"
+          :class="{ safe: !!board.cells[idx]?.safe, highlighted: isCellHighlighted(idx) }"
+        >
+          <div class="cell-content">
+            <div class="place-cells">
+              <div
+                v-for="placeNum in board.cells[idx]?.size"
+                :key="placeNum"
+                class="place"
+                :class="{
+                  [`chip-${board.cells[idx]?.places[placeNum - 1]?.player.color}`]:
+                    !!board.cells[idx]?.places[placeNum - 1],
+                  available: isChipAvailable(board.cells[idx]?.places[placeNum - 1]),
+                }"
+                :data-chip-id="board.cells[idx]?.places[placeNum - 1]?.id"
+                @click="onChipClick(board.cells[idx]?.places[placeNum - 1])"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Угол bottom-right -->
+      <div class="corner corner-bottom-right" :style="{ backgroundColor: players[2]?.color }">
+        <div class="start-cells">
+          <div
+            v-for="chip in players[2]?.boards[0]?.cells[0]?.places"
+            :key="chip?.id"
+            class="place"
+            :class="{
+              [`chip-${chip?.player.color}`]: !!chip,
+              available: isChipAvailable(chip),
+            }"
+            @click="onChipClick(chip)"
+          ></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
+
 <script setup lang="ts">
-import { reactive } from 'vue';
+import { reactive, computed } from 'vue';
 import { Board } from 'src/lib/board';
 import { usePlayerStore } from 'src/stores/player';
 import { firstElement, lastElement } from 'src/utils/array';
@@ -125,6 +273,20 @@ players.forEach(function (player) {
   firstElement(player.boards[2]!.cells)!.io = board.cells[player.i_end];
 });
 
+const topIndices = computed(() => Array.from({ length: 17 }, (_, i) => i)); // 0-16
+const rightIndices = computed(() => Array.from({ length: 17 }, (_, i) => i + 17)); // 17-33
+const bottomIndices = computed(() => Array.from({ length: 17 }, (_, i) => i + 34).reverse()); // 34-50 справа налево
+const leftIndices = computed(() => Array.from({ length: 17 }, (_, i) => i + 51).reverse()); // 51-67 снизу вверх
+
+const finishBoards = computed(() => players.map((p) => p.boards[2]!));
+
+const homeAreasOrdered = computed(() => [
+  players[0]!, // green -> top-left
+  players[1]!, // yellow -> top-right
+  players[3]!, // blue -> bottom-left
+  players[2]!, // red -> bottom-right
+]);
+
 function isChipAvailable(chip: Chip | null | undefined): boolean {
   if (!chip) return false;
   return props.availableChipIds?.includes(chip.id) ?? false;
@@ -140,70 +302,270 @@ function onChipClick(chip: Chip | null | undefined) {
   }
 }
 </script>
-<style>
-#board_cells {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
+
+<style scoped>
+.board-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
 }
-#board_cells li {
-  margin: 3px;
-  padding: 0;
-  float: left;
-  width: 10px;
-  background-color: #eee;
+
+.board {
+  display: grid;
+  grid-template-columns: 100px 1fr 100px;
+  grid-template-rows: 100px 1fr 100px;
+  width: 800px;
+  height: 800px;
+  gap: 2px;
+  position: relative;
 }
-#board_cells li.safe {
-  background-color: #bbb;
+
+.side {
+  display: flex;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 8px;
 }
-#board_cells li.highlighted {
+
+.side.top {
+  grid-column: 2;
+  grid-row: 1;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  height: 60px;
+}
+
+.side.right {
+  grid-column: 3;
+  grid-row: 2;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  width: 60px;
+}
+
+.side.bottom {
+  grid-column: 2;
+  grid-row: 3;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  height: 60px;
+}
+
+.side.left {
+  grid-column: 1;
+  grid-row: 2;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  width: 60px;
+}
+
+.cell {
+  width: 40px;
+  height: 40px;
+  margin: 2px;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+}
+
+.cell:hover {
+  background-color: #e0e0e0;
+  transform: scale(1.05);
+}
+
+.cell.safe {
+  background-color: #a0d8ff;
+  border-color: #007acc;
+}
+
+.cell.highlighted {
   background-color: #ffeb3b;
-  box-shadow: 0 0 5px 2px orange;
+  box-shadow: 0 0 8px 3px orange;
+  border-color: #ff9800;
 }
-#board_cells li div {
-  float: left;
-}
-#board_cells li .cell-in,
-#board_cells li .cell-out {
+
+.cell-content {
   width: 100%;
-  background-color: #fff;
-  font-size: 12px;
-  font-weight: bold;
-  text-align: center;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
-#board_cells li .cell-out {
-  height: 340px;
+
+.place-cells {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  margin: 2px 0;
 }
-#board_cells li .place-cells {
-  margin: 5px 0;
-  width: 100%;
-}
-#board_cells li .place-cells div {
-  width: 60%;
-  height: 10px;
-  margin: 2px 20%;
+
+.place {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
   background-color: #fff;
   cursor: pointer;
 }
-#board_cells li .place-cells div.chip-green {
+
+.place.chip-green {
   border: 1px solid white;
   background-color: green;
 }
-#board_cells li .place-cells div.chip-yellow {
+
+.place.chip-yellow {
   border: 1px solid black;
   background-color: #ffcc00;
 }
-#board_cells li .place-cells div.chip-red {
+
+.place.chip-red {
   border: 1px solid white;
   background-color: red;
 }
-#board_cells li .place-cells div.chip-blue {
+
+.place.chip-blue {
   border: 1px solid white;
   background-color: blue;
 }
-#board_cells li .place-cells div.available {
+
+.place.available {
   box-shadow: 0 0 5px 2px gold;
   border-radius: 2px;
+}
+
+.center {
+  grid-column: 2;
+  grid-row: 2;
+  background-color: #fff;
+  border: 2px solid #333;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.home-areas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 10px;
+  width: 80%;
+  height: 80%;
+}
+
+.home-area {
+  border-radius: 10px;
+  opacity: 0.7;
+}
+.start-cells {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+}
+
+.finish-tracks {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.finish-track {
+  position: absolute;
+  display: flex;
+  pointer-events: auto;
+}
+
+/* green - left side, horizontal track to the right */
+.finish-track:nth-child(1) {
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-direction: row;
+}
+
+/* yellow - top side, vertical track down */
+.finish-track:nth-child(2) {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  flex-direction: column;
+}
+
+/* red - right side, horizontal track to the left */
+.finish-track:nth-child(3) {
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-direction: row-reverse;
+}
+
+/* blue - bottom side, vertical track up */
+.finish-track:nth-child(4) {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  flex-direction: column-reverse;
+}
+
+.finish-cell {
+  width: 30px;
+  height: 30px;
+  margin: 2px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.finish-cell .place {
+  width: 10px;
+  height: 10px;
+}
+
+.corner {
+  width: 100px;
+  height: 100px;
+  border: 2px solid #333;
+  border-radius: 10px;
+  opacity: 0.8;
+}
+
+.corner-top-left {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.corner-top-right {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.corner-bottom-left {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.corner-bottom-right {
+  grid-column: 3;
+  grid-row: 3;
 }
 </style>
