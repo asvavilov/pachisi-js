@@ -1,6 +1,10 @@
 <template>
   <ul id="board_cells">
-    <li v-for="(cell, idx) of board.cells" :key="idx" :class="{ safe: !!cell.safe }">
+    <li
+      v-for="(cell, idx) of board.cells"
+      :key="idx"
+      :class="{ safe: !!cell.safe, highlighted: isCellHighlighted(idx) }"
+    >
       <div v-if="cell.io?.board.ind === 0" class="cell-in">
         <div
           v-for="(cell2, idx2) of cell.io.board.cells"
@@ -14,7 +18,10 @@
             class="place"
             :class="{
               [`chip-${cell2.places[placeNum - 1]?.player.color}`]: !!cell2.places[placeNum - 1],
+              available: isChipAvailable(cell2.places[placeNum - 1]),
             }"
+            :data-chip-id="cell2.places[placeNum - 1]?.id"
+            @click="onChipClick(cell2.places[placeNum - 1])"
           ></div>
         </div>
       </div>
@@ -25,7 +32,10 @@
           class="place"
           :class="{
             [`chip-${cell.places[placeNum - 1]?.player.color}`]: !!cell.places[placeNum - 1],
+            available: isChipAvailable(cell.places[placeNum - 1]),
           }"
+          :data-chip-id="cell.places[placeNum - 1]?.id"
+          @click="onChipClick(cell.places[placeNum - 1])"
         ></div>
       </div>
       <div v-if="cell.io?.board.ind === 2" class="cell-out">
@@ -41,7 +51,10 @@
             class="place"
             :class="{
               [`chip-${cell2.places[placeNum - 1]?.player.color}`]: !!cell2.places[placeNum - 1],
+              available: isChipAvailable(cell2.places[placeNum - 1]),
             }"
+            :data-chip-id="cell2.places[placeNum - 1]?.id"
+            @click="onChipClick(cell2.places[placeNum - 1])"
           ></div>
         </div>
       </div>
@@ -53,8 +66,18 @@ import { reactive } from 'vue';
 import { Board } from 'src/lib/board';
 import { usePlayerStore } from 'src/stores/player';
 import { firstElement, lastElement } from 'src/utils/array';
+import type { Chip } from 'src/lib/chip';
 
 const { items: players } = usePlayerStore();
+
+const props = defineProps<{
+  availableChipIds?: number[];
+  highlightedCells?: number[]; // индексы ячеек главной доски для подсветки
+}>();
+
+const emit = defineEmits<{
+  chipClick: [chip: Chip];
+}>();
 
 /**
  * карта ячеек безопасности
@@ -101,6 +124,21 @@ players.forEach(function (player) {
   player.boards[1] = board;
   firstElement(player.boards[2]!.cells)!.io = board.cells[player.i_end];
 });
+
+function isChipAvailable(chip: Chip | null | undefined): boolean {
+  if (!chip) return false;
+  return props.availableChipIds?.includes(chip.id) ?? false;
+}
+
+function isCellHighlighted(index: number): boolean {
+  return props.highlightedCells?.includes(index) ?? false;
+}
+
+function onChipClick(chip: Chip | null | undefined) {
+  if (chip && isChipAvailable(chip)) {
+    emit('chipClick', chip);
+  }
+}
 </script>
 <style>
 #board_cells {
@@ -118,6 +156,10 @@ players.forEach(function (player) {
 }
 #board_cells li.safe {
   background-color: #bbb;
+}
+#board_cells li.highlighted {
+  background-color: #ffeb3b;
+  box-shadow: 0 0 5px 2px orange;
 }
 #board_cells li div {
   float: left;
@@ -142,6 +184,7 @@ players.forEach(function (player) {
   height: 10px;
   margin: 2px 20%;
   background-color: #fff;
+  cursor: pointer;
 }
 #board_cells li .place-cells div.chip-green {
   border: 1px solid white;
@@ -158,5 +201,9 @@ players.forEach(function (player) {
 #board_cells li .place-cells div.chip-blue {
   border: 1px solid white;
   background-color: blue;
+}
+#board_cells li .place-cells div.available {
+  box-shadow: 0 0 5px 2px gold;
+  border-radius: 2px;
 }
 </style>

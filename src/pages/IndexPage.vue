@@ -1,10 +1,10 @@
 <template>
   <q-page class="q-pa-md">
     <div class="row items-center q-gutter-md">
-      <button @click="rollAndMove">Сделать ход</button>
-      <button @click="nextPlayer" :disabled="game.hasRolled">Пропустить ход</button>
+      <button @click="rollDice" :disabled="!canRollDice">Бросить кости</button>
       <span v-if="game.diceValues.length" class="q-ml-md">
         Кости: {{ game.diceValues }} (сумма: {{ game.diceSum }})
+        <span v-if="!game.allDiceUsed"> (использовано: {{ usedDiceText }})</span>
       </span>
     </div>
     <div class="info-panel q-pa-md q-mb-md" style="background-color: #f0f0f0; border-radius: 8px">
@@ -28,18 +28,29 @@
       </div>
     </div>
 
-    <div class="q-mt-md">
-      <strong>Доступные фишки:</strong> {{ movableChips.length }}
-      <ul v-if="movableChips.length">
-        <li v-for="(chip, idx) in movableChips" :key="idx">
-          Фишка {{ idx + 1 }} (позиция: {{ chip.cell?.board.ind }})
-          <button @click="moveChip(chip)">Выбрать</button>
-        </li>
-      </ul>
-      <span v-else>Нет доступных ходов</span>
+    <div v-if="selectedChip" class="q-mt-md selected-chip-panel">
+      <strong>Выбрана фишка</strong> (позиция: {{ selectedChip.cell?.board.ind }})
+      <div v-for="step in availableStepsForSelectedChip" :key="step" class="q-mt-xs">
+        <button @click="moveChip(selectedChip, step)">Двинуть на {{ step }}</button>
+      </div>
+      <button @click="selectedChip = null">Отмена</button>
     </div>
 
-    <MainBoard />
+    <div v-else class="q-mt-md">
+      <strong>Доступные фишки:</strong> {{ movableChips.length }}
+      <span v-if="movableChips.length === 0">Нет доступных ходов</span>
+    </div>
+
+    <div v-if="game.allDiceUsed && game.diceValues.length" class="q-mt-md">
+      <strong>Все кубики использованы. Ход завершён.</strong>
+      <button @click="finishTurn">Завершить ход</button>
+    </div>
+
+    <MainBoard
+      :available-chip-ids="availableChipIds"
+      :highlighted-cells="highlightedCellIndices"
+      @chip-click="onChipClick"
+    />
   </q-page>
 </template>
 
@@ -55,50 +66,99 @@ const diceStore = useDiceStore();
 const { items: players } = usePlayerStore();
 
 const game = ref<Game>(new Game(players));
+const selectedChip = ref<Chip | null>(null);
 
 const currentPlayerIndex = computed(() => game.value.currentPlayerIndex);
 const currentPlayerColor = computed(() => game.value.currentPlayer.color);
 const movableChips = computed(() => game.value.getMovableChips());
+const availableChipIds = computed(() => movableChips.value.map((chip) => chip.id));
+const usedDiceText = computed(() => {
+  const used = game.value.usedDice;
+  const dice = game.value.diceValues;
+  const parts = [];
+  if (used[0]) parts.push(`первый (${dice[0]})`);
+  if (used[1]) parts.push(`второй (${dice[1]})`);
+  return parts.join(', ') || 'нет';
+});
+
+// Можно ли бросить кости
+const canRollDice = computed(() => !game.value.hasRolled);
+
+// Шаги для выбранной фишки
+const availableStepsForSelectedChip = computed(() => {
+  if (!selectedChip.value) return [];
+  return game.value.getPossibleStepsForChip(selectedChip.value);
+});
+
+// Индексы ячеек для подсветки (целевые ячейки для выбранной фишки)
+const highlightedCellIndices = computed(() => {
+  const indices: number[] = [];
+  if (!selectedChip.value) return indices;
+  const board = game.value.currentPlayer.boards[1]; // главная доска
+  if (!board) return indices;
+  for (const step of availableStepsForSelectedChip.value) {
+    const targetCell = game.value.findTargetCell(selectedChip.value.cell!, step);
+    if (targetCell && targetCell.board === board) {
+      const idx = board.cells.indexOf(targetCell);
+      if (idx !== -1) indices.push(idx);
+    }
+  }
+  return indices;
+});
+
+// Обработчик клика на фишку
+function onChipClick(chip: Chip) {
+  if (availableChipIds.value.includes(chip.id)) {
+    selectedChip.value = chip;
+  }
+}
 
 // Синхронизация костей с игрой
 function syncDice() {
   if (diceStore.items.length > 0) {
     game.value.diceValues = [...diceStore.items];
     game.value.hasRolled = true;
+    game.value.usedDice = [false, false];
   }
 }
 
-// Бросить кости и подготовить ход
-function rollAndMove() {
-  if (!game.value.hasRolled) {
-    diceStore.drop();
-    syncDice();
-  }
-  // Если есть доступные фишки, двигаем первую
-  if (movableChips.value.length > 0) {
-    const chip = movableChips.value[0]!;
-    moveChip(chip);
+// Бросить кости
+function rollDice() {
+  diceStore.drop();
+  syncDice();
+  selectedChip.value = null;
+}
+
+// Переместить конкретную фишку на заданное количество шагов
+function moveChip(chip: Chip, steps: number) {
+  // Определяем индекс кубика по значению шага
+  let dieIndex = -1;
+  if (steps === game.value.diceValues[0] && !game.value.usedDice[0]) {
+    dieIndex = 0;
+  } else if (steps === game.value.diceValues[1] && !game.value.usedDice[1]) {
+    dieIndex = 1;
+  } else if (steps === game.value.diceSum && !game.value.usedDice[0] && !game.value.usedDice[1]) {
+    dieIndex = -1;
   } else {
-    // Нет доступных ходов - пропускаем ход
-    game.value.nextTurn();
-    diceStore.reset();
+    // Шаг не соответствует доступным кубикам
+    console.error('Недопустимый шаг');
+    return;
   }
-}
-
-// Переместить конкретную фишку
-function moveChip(chip: Chip) {
-  const success = game.value.moveChip(chip, game.value.diceSum);
+  const success = game.value.moveChip(chip, steps, dieIndex);
   if (success) {
-    // После успешного хода переходим к следующему игроку
-    game.value.nextTurn();
-    diceStore.reset();
+    selectedChip.value = null;
+    // После успешного хода проверяем, все ли кубики использованы
+    if (game.value.allDiceUsed) {
+      finishTurn();
+    }
   }
 }
 
-// Принудительно перейти к следующему игроку
-function nextPlayer() {
+// Завершить ход и перейти к следующему игроку
+function finishTurn() {
   game.value.nextTurn();
   diceStore.reset();
+  selectedChip.value = null;
 }
 
 // Инициализация
@@ -120,5 +180,11 @@ button {
 button:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+}
+.selected-chip-panel {
+  background-color: #e8f4fd;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #b3d9ff;
 }
 </style>

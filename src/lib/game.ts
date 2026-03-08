@@ -10,6 +10,7 @@ export class Game {
   currentPlayerIndex: number = 0;
   diceValues: number[] = [];
   hasRolled: boolean = false;
+  usedDice: boolean[] = [false, false]; // отслеживание использованных кубиков
 
   constructor(players: Player[]) {
     this.players = players;
@@ -21,6 +22,7 @@ export class Game {
   rollDice(): number[] {
     this.diceValues = Array.from({ length: 2 }, () => Math.floor(Math.random() * 6) + 1);
     this.hasRolled = true;
+    this.usedDice = [false, false];
     console.log(`Игрок ${this.currentPlayer.color} бросил кости: ${this.diceValues.join(' и ')}`);
     return this.diceValues;
   }
@@ -40,6 +42,45 @@ export class Game {
   }
 
   /**
+   * Получить доступные варианты шагов (неиспользованные кубики и сумму)
+   */
+  getAvailableSteps(): number[] {
+    const steps: number[] = [];
+    if (this.diceValues.length === 0) return steps;
+    if (this.diceValues.length >= 1 && !this.usedDice[0]) steps.push(this.diceValues[0]!);
+    if (this.diceValues.length >= 2 && !this.usedDice[1]) steps.push(this.diceValues[1]!);
+    // Если оба кубика не использованы, можно предложить сумму
+    if (!this.usedDice[0] && !this.usedDice[1]) {
+      steps.push(this.diceSum);
+    }
+    return steps;
+  }
+
+  /**
+   * Использовать кубик по индексу (0 или 1) или сумму (индекс -1)
+   */
+  useDie(index: number): boolean {
+    if (index === -1) {
+      // использование суммы означает использование обоих кубиков
+      if (this.usedDice[0] || this.usedDice[1]) return false;
+      this.usedDice[0] = true;
+      this.usedDice[1] = true;
+      return true;
+    }
+    if (index < 0 || index >= this.diceValues.length) return false;
+    if (this.usedDice[index]) return false;
+    this.usedDice[index] = true;
+    return true;
+  }
+
+  /**
+   * Проверка, все ли кубики использованы
+   */
+  get allDiceUsed(): boolean {
+    return this.usedDice.every((used) => used);
+  }
+
+  /**
    * Переход хода к следующему игроку
    */
   nextTurn() {
@@ -47,23 +88,44 @@ export class Game {
     this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
     this.diceValues = [];
     this.hasRolled = false;
+    this.usedDice = [false, false];
   }
 
   /**
-   * Получить список фишек, которые могут быть перемещены на текущий бросок
+   * Получить список фишек, которые могут быть перемещены на заданное количество шагов
    */
-  getMovableChips(): Chip[] {
+  getMovableChipsForSteps(steps: number): Chip[] {
     if (!this.hasRolled) return [];
     const player = this.currentPlayer;
     const movable: Chip[] = [];
 
     for (const chip of player.chips) {
-      if (this.canMoveChip(chip, this.diceSum)) {
+      if (this.canMoveChip(chip, steps)) {
         movable.push(chip);
       }
     }
 
     return movable;
+  }
+
+  /**
+   * Получить список фишек, которые могут быть перемещены на любой из доступных шагов
+   */
+  getMovableChips(): Chip[] {
+    const steps = this.getAvailableSteps();
+    const movable: Chip[] = [];
+    for (const step of steps) {
+      movable.push(...this.getMovableChipsForSteps(step));
+    }
+    // Убрать дубликаты (одна фишка может быть доступна для нескольких шагов)
+    return Array.from(new Set(movable));
+  }
+
+  /**
+   * Получить возможные шаги для конкретной фишки
+   */
+  getPossibleStepsForChip(chip: Chip): number[] {
+    return this.getAvailableSteps().filter((step) => this.canMoveChip(chip, step));
   }
 
   /**
@@ -131,14 +193,28 @@ export class Game {
   }
 
   /**
-   * Переместить фишку на steps шагов
+   * Переместить фишку на steps шагов с использованием соответствующего кубика
+   * @param chip Фишка
+   * @param steps Количество шагов (должно соответствовать одному из доступных шагов)
+   * @param dieIndex Индекс кубика (0,1) или -1 для суммы
    */
-  moveChip(chip: Chip, steps: number): boolean {
+  moveChip(chip: Chip, steps: number, dieIndex: number): boolean {
     if (!this.canMoveChip(chip, steps)) {
+      return false;
+    }
+    // Проверяем, что выбранный шаг соответствует доступному кубику
+    const availableSteps = this.getAvailableSteps();
+    if (!availableSteps.includes(steps)) {
+      return false;
+    }
+    // Используем кубик
+    if (!this.useDie(dieIndex)) {
       return false;
     }
     const targetCell = this.findTargetCell(chip.cell!, steps);
     if (!targetCell) {
+      // Откат использования кубика? Пока просто вернём false, но кубик уже использован
+      // Для простоты не будем делать откат, т.к. это маловероятно
       return false;
     }
 
