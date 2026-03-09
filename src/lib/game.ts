@@ -16,21 +16,16 @@ export class Game {
 
   constructor(players: Player[]) {
     this.players = players;
-    // Инициализация бонусных шагов не требуется, так как они привязаны к текущему ходу
   }
 
   /**
    * Добавить бонусные шаги текущему игроку (только если это текущий игрок)
    */
-  addBonus(player: Player, steps: number) {
-    if (player !== this.currentPlayer) {
-      console.warn(`Попытка добавить бонус не текущему игроку: ${player.color}`);
-      return;
-    }
+  addBonus(steps: number) {
     // Добавляем отдельный бонусный шаг (10 или 20) в массив
     this.currentBonusSteps.push(steps);
     console.log(
-      `Игрок ${player.color} получил бонус +${steps} шагов. Теперь бонусы: [${this.currentBonusSteps.join(', ')}]`,
+      `Игрок получил бонус +${steps} шагов. Теперь бонусы: [${this.currentBonusSteps.join(', ')}]`,
     );
   }
 
@@ -404,7 +399,7 @@ export class Game {
         }
         // Начисляем бонус +20 за захват
         if (captured) {
-          this.addBonus(this.currentPlayer, 20);
+          this.addBonus(20);
         }
       }
     }

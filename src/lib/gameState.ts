@@ -1,3 +1,5 @@
+// TODO см. как использовать
+
 import type { Player } from './player';
 
 /**
@@ -9,8 +11,9 @@ export interface GameState {
   diceValues: number[];
   hasRolled: boolean;
   usedDice: boolean[]; // два кубика
-  winner: Player | null;
-  // бонусные очки, которые можно использовать (массив значений 10 или 20)
+  // победители по местам
+  winners: Player[];
+  // бонусные очки, которые можно использовать
   bonusSteps: number[];
 }
 
@@ -35,7 +38,7 @@ export function createInitialState(players: Player[]): GameState {
     diceValues: [],
     hasRolled: false,
     usedDice: [false, false],
-    winner: null,
+    winners: [],
     bonusSteps: [],
   };
 }
