@@ -12,6 +12,7 @@ export class Chip {
   cell: Cell | null;
   go: (to_cell: Cell) => void;
   readonly id: number;
+  finished: boolean;
 
   constructor(player: Player) {
     /**
@@ -26,12 +27,20 @@ export class Chip {
      * уникальный идентификатор для отладки
      */
     this.id = ++chipIdCounter;
+    /**
+     * финишировала ли фишка (достигла последней ячейки финишной дорожки)
+     */
+    this.finished = false;
 
     /**
      * переход фишки к ячейке
      * FIXME проверки на возможность перехода должны осуществляться ранее
      */
     this.go = (to_cell) => {
+      if (this.finished) {
+        console.warn(`[фишка ${this.id}] уже финишировала, не может двигаться`);
+        return;
+      }
       if (this.cell) {
         const idx = this.cell.places.findIndex((p) => toRaw(p) === this);
         if (idx >= 0) {
@@ -60,5 +69,14 @@ export class Chip {
         console.warn(`[фишка ${this.id}] Нет свободных мест в ячейке!`);
       }
     };
+  }
+
+  /**
+   * Пометить фишку как финишировавшую (достигла конечной ячейки)
+   */
+  finish() {
+    this.finished = true;
+    // Оставляем фишку на текущей ячейке, но больше не может двигаться
+    console.log(`Фишка ${this.id} игрока ${this.player.color} финишировала!`);
   }
 }

@@ -11,9 +11,26 @@ export class Game {
   diceValues: number[] = [];
   hasRolled: boolean = false;
   usedDice: boolean[] = [false, false]; // отслеживание использованных кубиков
+  winner: Player | null = null; // победитель игры, если есть
+  bonusSteps: Map<Player, number> = new Map(); // бонусные шаги за захват
 
   constructor(players: Player[]) {
     this.players = players;
+    // Инициализируем бонусные шаги нулями
+    for (const player of players) {
+      this.bonusSteps.set(player, 0);
+    }
+  }
+
+  /**
+   * Добавить бонусные шаги игроку
+   */
+  addBonus(player: Player, steps: number) {
+    const current = this.bonusSteps.get(player) || 0;
+    this.bonusSteps.set(player, current + steps);
+    console.log(
+      `Игрок ${player.color} получил бонус +${steps} шагов. Теперь бонус: ${current + steps}`,
+    );
   }
 
   /**
@@ -52,6 +69,11 @@ export class Game {
     // Если оба кубика не использованы, можно предложить сумму
     if (!this.usedDice[0] && !this.usedDice[1]) {
       steps.push(this.diceSum);
+    }
+    // Бонусные шаги
+    const bonus = this.bonusSteps.get(this.currentPlayer) || 0;
+    if (bonus >= 20) {
+      steps.push(20);
     }
     return steps;
   }
@@ -132,6 +154,8 @@ export class Game {
    * Проверка, может ли фишка быть перемещена на заданное количество шагов
    */
   canMoveChip(chip: Chip, steps: number): boolean {
+    // Если фишка финишировала, не может двигаться
+    if (chip.finished) return false;
     // Если фишка ещё не на доске (в стартовой ячейке)
     if (!chip.cell) return false;
 
@@ -142,38 +166,141 @@ export class Game {
     // или на стартовой/конечной доске.
     // Реализуем простой поиск следующей ячейки через steps шагов.
     // Это временная реализация, позже нужно заменить на правильную логику.
-    const targetCell = this.findTargetCell(currentCell, steps);
+    const targetCell = this.findTargetCell(currentCell, steps, chip.player);
     return targetCell !== null;
+  }
+
+  /**
+   * Получить промежуточные ячейки при движении от startCell на steps шагов по главной доске.
+   * Возвращает массив ячеек, через которые проходит фишка (исключая startCell, включая targetCell).
+   * Если движение происходит по финишной доске или стартовой, возвращает пустой массив.
+   */
+  private getIntermediateCells(startCell: Cell, steps: number): Cell[] {
+    if (startCell.board.ind !== 1) {
+      // Не главная доска - нет промежуточных ячеек (движение по финишной или стартовой доске)
+      return [];
+    }
+    const mainBoard = startCell.board;
+    const idx = mainBoard.cells.indexOf(startCell);
+    if (idx === -1) return [];
+    const totalCells = mainBoard.cells.length;
+    const cells: Cell[] = [];
+    for (let i = 1; i <= steps; i++) {
+      const newIdx = (idx + i) % totalCells;
+      cells.push(mainBoard.cells[newIdx]!);
+    }
+    return cells;
   }
 
   /**
    * Найти целевую ячейку после steps шагов от текущей ячейки
    */
-  findTargetCell(from: Cell, steps: number): Cell | null {
-    // Если фишка на стартовой или конечной доске, переводим на главную доску через переход (io)
-    let currentBoard = from.board;
-    let currentCell = from;
-    // Если это не главная доска (index !== 1) и есть переход на главную, используем его без затраты шагов
-    if (currentBoard.ind !== 1 && currentCell.io) {
-      currentCell = currentCell.io;
-      currentBoard = currentCell.board;
+  findTargetCell(from: Cell, steps: number, player?: Player): Cell | null {
+    // Если игрок не передан, движение невозможно (но в вызывающем коде player всегда передаётся)
+    if (!player) return null;
+
+    const currentCell = from;
+    const remainingSteps = steps;
+
+    // 1. Если фишка на стартовой доске (ind === 0)
+    if (currentCell.board.ind === 0) {
+      // Выход из базы возможен только при steps === 5 и если выходная ячейка свободна
+      if (steps !== 5) {
+        return null; // нельзя выйти с другими шагами
+      }
+      if (!currentCell.io) {
+        return null; // нет перехода
+      }
+      // Проверяем, свободна ли выходная ячейка (не занята другой своей фишкой)
+      const exitCell = currentCell.io;
+      const isExitFree = exitCell.places.every((p) => p === null);
+      if (!isExitFree) {
+        return null; // ячейка занята
+      }
+      // Также проверяем, не заблокирована ли ячейка (блок из двух фишек одного цвета)
+      if (this.isCellBlocked(exitCell)) {
+        return null;
+      }
+      return exitCell;
     }
-    // Теперь currentCell находится на главной доске (или осталась на главной, если уже была)
-    if (currentBoard.ind !== 1) {
-      // Не удалось перейти на главную доску - движение невозможно
+
+    // 2. Если фишка на финишной доске (ind === 2), двигаемся только по ней
+    if (currentCell.board.ind === 2) {
+      // Финишная доска принадлежит игроку? Проверим
+      if (currentCell.board.player !== player) {
+        // Фишка на чужой финишной доске - невозможно
+        return null;
+      }
+      const idx = currentCell.board.cells.indexOf(currentCell);
+      if (idx === -1) return null;
+      const newIdx = idx + remainingSteps;
+      // Нельзя выйти за пределы финишной дорожки
+      if (newIdx >= currentCell.board.cells.length) {
+        return null;
+      }
+      const targetCell = currentCell.board.cells[newIdx]!;
+      // Проверяем, не заблокирована ли целевая ячейка (на финишной доске блоки возможны?)
+      // По правилам блоки на финишной доске не рассматриваются, но для безопасности проверим.
+      if (this.isCellBlocked(targetCell)) {
+        return null;
+      }
+      return targetCell;
+    }
+
+    // 3. Проверим, является ли текущая ячейка входом на финишную дорожку для данного игрока
+    // Если да и steps == 1, фишка переходит на финишную дорожку (первую ячейку)
+    if (
+      currentCell.io &&
+      currentCell.io.board.ind === 2 &&
+      currentCell.io.board.player === player
+    ) {
+      if (remainingSteps === 1) {
+        // Переход на финишную дорожку занимает один шаг
+        const targetCell = currentCell.io;
+        if (this.isCellBlocked(targetCell)) {
+          return null;
+        }
+        return targetCell;
+      }
+      // Если steps > 1, фишка продолжает движение по основной доске (игнорируем переход)
+    }
+
+    // 4. Движение по главной доске
+    const mainBoard = currentCell.board;
+    if (mainBoard.ind !== 1) {
+      // Не главная доска - что-то пошло не так
       return null;
     }
-    // Находим индекс ячейки на главной доске
-    const idx = currentBoard.cells.indexOf(currentCell);
-    if (idx === -1) {
+    const idx = mainBoard.cells.indexOf(currentCell);
+    if (idx === -1) return null;
+    const totalCells = mainBoard.cells.length;
+    const newIdx = (idx + remainingSteps) % totalCells;
+    let targetCell = mainBoard.cells[newIdx]!;
+
+    // 5. Проверим, является ли целевая ячейка входом на финишную дорожку для player
+    // (только если мы точно попали на вход, т.е. не прошли мимо)
+    // Поскольку движение циклическое, мы могли пройти вход и продолжить дальше, но если newIdx соответствует ячейке входа,
+    // то это означает, что мы точно попали на вход.
+    if (targetCell.io && targetCell.io.board.ind === 2 && targetCell.io.board.player === player) {
+      // Фишка попадает на вход финишной дорожки. Переходим на финишную дорожку.
+      // При этом остаток шагов равен 0, потому что мы уже использовали все шаги для достижения этой ячейки.
+      // Фишка просто переходит на первую ячейку финишной дорожки (targetCell.io).
+      targetCell = targetCell.io;
+    }
+
+    // 6. Проверка блокировки: нельзя остановиться на заблокированной ячейке
+    if (this.isCellBlocked(targetCell)) {
       return null;
     }
-    // Вычисляем новый индекс с учётом шагов (движение только вперёд)
-    const newIdx = (idx + steps) % currentBoard.cells.length;
-    const targetCell = currentBoard.cells[newIdx];
-    if (!targetCell) {
-      return null;
+
+    // 7. Проверка блокировки пути: нельзя пройти через заблокированную ячейку
+    const intermediateCells = this.getIntermediateCells(currentCell, steps);
+    for (const cell of intermediateCells) {
+      if (this.isCellBlocked(cell)) {
+        return null;
+      }
     }
+
     return targetCell;
   }
 
@@ -187,9 +314,39 @@ export class Game {
     }
     if (safe instanceof Player) {
       // стартовая ячейка конкретного игрока
+      if (forPlayer === undefined) {
+        // Без указания игрока считаем, что ячейка безопасна (для кого-то)
+        return true;
+      }
       return safe === forPlayer;
     }
     return false; // не безопасна
+  }
+
+  /**
+   * Проверка, является ли ячейка заблокированной (блок)
+   * Блок образуют:
+   * - две фишки одного цвета на любой ячейке общей дорожки
+   * - две фишки разного цвета на безопасной ячейке или на выходе из базы
+   */
+  isCellBlocked(cell: Cell): boolean {
+    const places = cell.places.filter((p) => p !== null);
+    if (places.length < 2) {
+      return false; // меньше двух фишек - не блок
+    }
+    // Проверяем, все ли фишки одного цвета
+    const firstColor = places[0]!.player.color;
+    const allSameColor = places.every((p) => p.player.color === firstColor);
+    if (allSameColor) {
+      return true; // блок из одинаковых цветов
+    }
+    // Если фишки разного цвета, проверяем, является ли ячейка безопасной или выходом из базы
+    const isSafe = this.isSafeCell(cell);
+    if (isSafe) {
+      return true; // блок из разных цветов на безопасной ячейке
+    }
+    // Также выход из базы (safe instanceof Player) считается безопасной ячейкой, уже покрыто isSafeCell
+    return false;
   }
 
   /**
@@ -207,19 +364,32 @@ export class Game {
     if (!availableSteps.includes(steps)) {
       return false;
     }
-    // Используем кубик
-    if (!this.useDie(dieIndex)) {
-      return false;
+    // Определяем, является ли шаг бонусным (20)
+    const isBonusStep = steps === 20 && (this.bonusSteps.get(this.currentPlayer) || 0) >= 20;
+    if (isBonusStep) {
+      // Используем бонусные шаги
+      const currentBonus = this.bonusSteps.get(this.currentPlayer) || 0;
+      this.bonusSteps.set(this.currentPlayer, currentBonus - 20);
+      console.log(
+        `Игрок ${this.currentPlayer.color} использовал бонус +20 шагов. Остаток бонуса: ${currentBonus - 20}`,
+      );
+    } else {
+      // Используем кубик
+      if (!this.useDie(dieIndex)) {
+        return false;
+      }
     }
-    const targetCell = this.findTargetCell(chip.cell!, steps);
+    const targetCell = this.findTargetCell(chip.cell!, steps, chip.player);
     if (!targetCell) {
       // Откат использования кубика? Пока просто вернём false, но кубик уже использован
       // Для простоты не будем делать откат, т.к. это маловероятно
+      // Однако если использовался бонус, нужно вернуть его? Пока не будем.
       return false;
     }
 
     // Проверка на захват: если в целевой ячейке есть фишка другого игрока и ячейка не безопасна для текущей фишки
     const otherChips = targetCell.places.filter((p) => p && p.player !== chip.player);
+    let captured = false;
     if (otherChips.length > 0) {
       const isSafe = this.isSafeCell(targetCell, chip.player);
       if (!isSafe) {
@@ -228,7 +398,12 @@ export class Game {
           if (otherChip) {
             console.log(`Захват! Фишка игрока ${otherChip.player.color} отправлена на старт.`);
             this.sendToStart(otherChip);
+            captured = true;
           }
+        }
+        // Начисляем бонус +20 за захват
+        if (captured) {
+          this.addBonus(this.currentPlayer, 20);
         }
       }
     }
@@ -236,7 +411,35 @@ export class Game {
     // Выполняем перемещение
     console.log(`Игрок ${chip.player.color} переместил фишку на ${steps} шагов.`);
     chip.go(targetCell);
+
+    // Проверка на финиш
+    if (targetCell.board.ind === 2 && targetCell.board.player === chip.player) {
+      const finishBoard = targetCell.board;
+      const lastCellIndex = finishBoard.cells.length - 1;
+      if (finishBoard.cells.indexOf(targetCell) === lastCellIndex) {
+        chip.finish();
+        // Проверить, не победил ли игрок
+        this.checkWinner();
+      }
+    }
+
     return true;
+  }
+
+  /**
+   * Проверить, есть ли победитель (игрок, все фишки которого финишировали)
+   * Устанавливает поле winner, если победитель найден.
+   */
+  checkWinner(): Player | null {
+    if (this.winner) return this.winner; // уже определён
+    for (const player of this.players) {
+      if (player.chips.every((chip) => chip.finished)) {
+        this.winner = player;
+        console.log(`🎉 Игрок ${player.color} победил! Все фишки финишировали.`);
+        return player;
+      }
+    }
+    return null;
   }
 
   /**

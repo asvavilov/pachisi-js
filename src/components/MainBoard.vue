@@ -11,6 +11,7 @@
             :class="{
               [`chip-${chip?.player.color}`]: !!chip,
               available: isChipAvailable(chip),
+              finished: isChipFinished(chip),
             }"
             @click="onChipClick(chip)"
           ></div>
@@ -34,6 +35,7 @@
                   [`chip-${board.cells[idx]?.places[placeNum - 1]?.player.color}`]:
                     !!board.cells[idx]?.places[placeNum - 1],
                   available: isChipAvailable(board.cells[idx]?.places[placeNum - 1]),
+                  finished: isChipFinished(board.cells[idx]?.places[placeNum - 1]),
                 }"
                 :data-chip-id="board.cells[idx]?.places[placeNum - 1]?.id"
                 @click="onChipClick(board.cells[idx]?.places[placeNum - 1])"
@@ -52,6 +54,7 @@
             :class="{
               [`chip-${chip?.player.color}`]: !!chip,
               available: isChipAvailable(chip),
+              finished: isChipFinished(chip),
             }"
             @click="onChipClick(chip)"
           ></div>
@@ -75,6 +78,7 @@
                   [`chip-${board.cells[idx]?.places[placeNum - 1]?.player.color}`]:
                     !!board.cells[idx]?.places[placeNum - 1],
                   available: isChipAvailable(board.cells[idx]?.places[placeNum - 1]),
+                  finished: isChipFinished(board.cells[idx]?.places[placeNum - 1]),
                 }"
                 :data-chip-id="board.cells[idx]?.places[placeNum - 1]?.id"
                 @click="onChipClick(board.cells[idx]?.places[placeNum - 1])"
@@ -117,6 +121,7 @@
                 :class="{
                   [`chip-${cell.places[placeNum - 1]?.player.color}`]: !!cell.places[placeNum - 1],
                   available: isChipAvailable(cell.places[placeNum - 1]),
+                  finished: isChipFinished(cell.places[placeNum - 1]),
                 }"
               ></div>
             </div>
@@ -141,6 +146,7 @@
                   [`chip-${board.cells[idx]?.places[placeNum - 1]?.player.color}`]:
                     !!board.cells[idx]?.places[placeNum - 1],
                   available: isChipAvailable(board.cells[idx]?.places[placeNum - 1]),
+                  finished: isChipFinished(board.cells[idx]?.places[placeNum - 1]),
                 }"
                 :data-chip-id="board.cells[idx]?.places[placeNum - 1]?.id"
                 @click="onChipClick(board.cells[idx]?.places[placeNum - 1])"
@@ -159,6 +165,7 @@
             :class="{
               [`chip-${chip?.player.color}`]: !!chip,
               available: isChipAvailable(chip),
+              finished: isChipFinished(chip),
             }"
             @click="onChipClick(chip)"
           ></div>
@@ -182,6 +189,7 @@
                   [`chip-${board.cells[idx]?.places[placeNum - 1]?.player.color}`]:
                     !!board.cells[idx]?.places[placeNum - 1],
                   available: isChipAvailable(board.cells[idx]?.places[placeNum - 1]),
+                  finished: isChipFinished(board.cells[idx]?.places[placeNum - 1]),
                 }"
                 :data-chip-id="board.cells[idx]?.places[placeNum - 1]?.id"
                 @click="onChipClick(board.cells[idx]?.places[placeNum - 1])"
@@ -200,6 +208,7 @@
             :class="{
               [`chip-${chip?.player.color}`]: !!chip,
               available: isChipAvailable(chip),
+              finished: isChipFinished(chip),
             }"
             @click="onChipClick(chip)"
           ></div>
@@ -290,6 +299,10 @@ const homeAreasOrdered = computed(() => [
 function isChipAvailable(chip: Chip | null | undefined): boolean {
   if (!chip) return false;
   return props.availableChipIds?.includes(chip.id) ?? false;
+}
+
+function isChipFinished(chip: Chip | null | undefined): boolean {
+  return chip?.finished ?? false;
 }
 
 function isCellHighlighted(index: number): boolean {
@@ -444,6 +457,11 @@ function onChipClick(chip: Chip | null | undefined) {
   border-radius: 2px;
 }
 
+.place.finished {
+  opacity: 0.5;
+  filter: grayscale(70%);
+  border: 1px dashed #333;
+}
 .center {
   grid-column: 2;
   grid-row: 2;
@@ -490,6 +508,9 @@ function onChipClick(chip: Chip | null | undefined) {
   position: absolute;
   display: flex;
   pointer-events: auto;
+  background-color: color-mix(in srgb, var(--player-color, gray) 15%, white);
+  border-radius: 4px;
+  padding: 2px;
 }
 
 /* green - left side, horizontal track to the right */
@@ -528,8 +549,8 @@ function onChipClick(chip: Chip | null | undefined) {
   width: 30px;
   height: 30px;
   margin: 2px;
-  background-color: rgba(255, 255, 255, 0.8);
-  border: 1px solid #ccc;
+  background-color: color-mix(in srgb, var(--player-color, #ccc) 10%, white);
+  border: 1px solid var(--player-color, #ccc);
   border-radius: 4px;
   display: flex;
   align-items: center;
