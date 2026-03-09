@@ -154,23 +154,23 @@ function rollDice() {
 // Переместить конкретную фишку на заданное количество шагов
 function moveChip(chip: Chip, steps: number) {
   // Определяем индекс кубика по значению шага
-  let dieIndex = -1;
+  let diceIndex = -1;
   const bonusSteps = game.value.currentBonusSteps;
   if (bonusSteps.includes(steps)) {
     // Бонусный шаг
-    dieIndex = -2;
+    diceIndex = -2;
   } else if (steps === game.value.diceValues[0] && !game.value.usedDice[0]) {
-    dieIndex = 0;
+    diceIndex = 0;
   } else if (steps === game.value.diceValues[1] && !game.value.usedDice[1]) {
-    dieIndex = 1;
+    diceIndex = 1;
   } else if (steps === game.value.diceSum && !game.value.usedDice[0] && !game.value.usedDice[1]) {
-    dieIndex = -1;
+    diceIndex = -1;
   } else {
     // Шаг не соответствует доступным кубикам
     console.error('Недопустимый шаг');
     return;
   }
-  const success = game.value.moveChip(chip, steps, dieIndex);
+  const success = game.value.moveChip(chip, steps, diceIndex);
   if (success) {
     selectedChip.value = null;
     // После успешного хода проверяем, все ли кубики использованы

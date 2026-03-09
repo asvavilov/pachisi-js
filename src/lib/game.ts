@@ -350,9 +350,9 @@ export class Game {
    * Переместить фишку на steps шагов с использованием соответствующего кубика
    * @param chip Фишка
    * @param steps Количество шагов (должно соответствовать одному из доступных шагов)
-   * @param dieIndex Индекс кубика (0,1) или -1 для суммы
+   * @param diceIndex Индекс кубика (0,1) или -1 для суммы
    */
-  moveChip(chip: Chip, steps: number, dieIndex: number): boolean {
+  moveChip(chip: Chip, steps: number, diceIndex: number): boolean {
     if (!this.canMoveChip(chip, steps)) {
       return false;
     }
@@ -371,7 +371,7 @@ export class Game {
       );
     } else {
       // Используем кубик
-      if (!this.useDice(dieIndex)) {
+      if (!this.useDice(diceIndex)) {
         return false;
       }
     }

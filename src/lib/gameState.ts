@@ -23,7 +23,7 @@ export interface GameState {
 export type GameAction =
   | { type: 'ROLL_DICE' }
   | { type: 'USE_DICE'; index: number }
-  | { type: 'MOVE_CHIP'; chipId: number; steps: number; dieIndex: number }
+  | { type: 'MOVE_CHIP'; chipId: number; steps: number; diceIndex: number }
   | { type: 'NEXT_TURN' }
   | { type: 'ADD_BONUS'; bonus: number }
   | { type: 'USE_BONUS'; bonusIndex: number; chipId: number; steps: number };
