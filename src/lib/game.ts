@@ -12,24 +12,25 @@ export class Game {
   hasRolled: boolean = false;
   usedDice: boolean[] = [false, false]; // отслеживание использованных кубиков
   winner: Player | null = null; // победитель игры, если есть
-  bonusSteps: Map<Player, number> = new Map(); // бонусные шаги за захват
+  currentBonusSteps: number[] = []; // бонусные шаги за захват в текущем ходе (10 или 20)
 
   constructor(players: Player[]) {
     this.players = players;
-    // Инициализируем бонусные шаги нулями
-    for (const player of players) {
-      this.bonusSteps.set(player, 0);
-    }
+    // Инициализация бонусных шагов не требуется, так как они привязаны к текущему ходу
   }
 
   /**
-   * Добавить бонусные шаги игроку
+   * Добавить бонусные шаги текущему игроку (только если это текущий игрок)
    */
   addBonus(player: Player, steps: number) {
-    const current = this.bonusSteps.get(player) || 0;
-    this.bonusSteps.set(player, current + steps);
+    if (player !== this.currentPlayer) {
+      console.warn(`Попытка добавить бонус не текущему игроку: ${player.color}`);
+      return;
+    }
+    // Добавляем отдельный бонусный шаг (10 или 20) в массив
+    this.currentBonusSteps.push(steps);
     console.log(
-      `Игрок ${player.color} получил бонус +${steps} шагов. Теперь бонус: ${current + steps}`,
+      `Игрок ${player.color} получил бонус +${steps} шагов. Теперь бонусы: [${this.currentBonusSteps.join(', ')}]`,
     );
   }
 
@@ -70,10 +71,9 @@ export class Game {
     if (!this.usedDice[0] && !this.usedDice[1]) {
       steps.push(this.diceSum);
     }
-    // Бонусные шаги
-    const bonus = this.bonusSteps.get(this.currentPlayer) || 0;
-    if (bonus >= 20) {
-      steps.push(20);
+    // Бонусные шаги (каждый бонус добавляется как отдельный шаг)
+    for (const bonus of this.currentBonusSteps) {
+      steps.push(bonus);
     }
     return steps;
   }
@@ -111,6 +111,8 @@ export class Game {
     this.diceValues = [];
     this.hasRolled = false;
     this.usedDice = [false, false];
+    // Сбрасываем бонусы текущего хода
+    this.currentBonusSteps = [];
   }
 
   /**
@@ -364,14 +366,13 @@ export class Game {
     if (!availableSteps.includes(steps)) {
       return false;
     }
-    // Определяем, является ли шаг бонусным (20)
-    const isBonusStep = steps === 20 && (this.bonusSteps.get(this.currentPlayer) || 0) >= 20;
-    if (isBonusStep) {
-      // Используем бонусные шаги
-      const currentBonus = this.bonusSteps.get(this.currentPlayer) || 0;
-      this.bonusSteps.set(this.currentPlayer, currentBonus - 20);
+    // Определяем, является ли шаг бонусным (10 или 20)
+    const bonusIndex = this.currentBonusSteps.indexOf(steps);
+    if (bonusIndex !== -1) {
+      // Используем бонусный шаг
+      this.currentBonusSteps.splice(bonusIndex, 1);
       console.log(
-        `Игрок ${this.currentPlayer.color} использовал бонус +20 шагов. Остаток бонуса: ${currentBonus - 20}`,
+        `Игрок ${this.currentPlayer.color} использовал бонус +${steps} шагов. Осталось бонусов: ${this.currentBonusSteps.length}`,
       );
     } else {
       // Используем кубик

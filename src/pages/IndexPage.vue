@@ -5,8 +5,8 @@
       <span v-if="game.diceValues.length" class="q-ml-md">
         Кости: {{ game.diceValues }} (сумма: {{ game.diceSum }})
         <span v-if="!game.allDiceUsed"> (использовано: {{ usedDiceText }})</span>
-        <span v-if="bonusSteps >= 20" class="q-ml-md" style="color: green">
-          Бонус +20 доступен
+        <span v-if="currentBonusSteps.length > 0" class="q-ml-md" style="color: green">
+          Бонусы доступны: {{ currentBonusSteps.map((s) => `+${s}`).join(', ') }}
         </span>
       </span>
     </div>
@@ -84,7 +84,7 @@ const usedDiceText = computed(() => {
   return parts.join(', ') || 'нет';
 });
 
-const bonusSteps = computed(() => game.value.bonusSteps.get(game.value.currentPlayer) || 0);
+const currentBonusSteps = computed(() => game.value.currentBonusSteps);
 
 // Можно ли бросить кости
 const canRollDice = computed(() => !game.value.hasRolled);
@@ -155,8 +155,8 @@ function rollDice() {
 function moveChip(chip: Chip, steps: number) {
   // Определяем индекс кубика по значению шага
   let dieIndex = -1;
-  const bonus = game.value.bonusSteps.get(game.value.currentPlayer) || 0;
-  if (steps === 20 && bonus >= 20) {
+  const bonusSteps = game.value.currentBonusSteps;
+  if (bonusSteps.includes(steps)) {
     // Бонусный шаг
     dieIndex = -2;
   } else if (steps === game.value.diceValues[0] && !game.value.usedDice[0]) {
