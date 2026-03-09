@@ -2,91 +2,37 @@
   <div class="board-wrapper">
     <div class="board">
       <!-- Угол top-left -->
-      <div class="corner corner-top-left" :style="{ backgroundColor: players[0]?.color }">
-        <div class="start-cells">
-          <div
-            v-for="chip in players[0]?.boards[0]?.cells[0]?.places"
-            :key="chip?.id"
-            class="place"
-            :class="{
-              [`chip-${chip?.player.color}`]: !!chip,
-              available: isChipAvailable(chip),
-              finished: isChipFinished(chip),
-            }"
-            @click="onChipClick(chip)"
-          ></div>
-        </div>
-      </div>
+      <CornerBoard
+        corner="top-left"
+        :player="players[0] ?? null"
+        :available-chip-ids="availableChipIdsArray"
+        @chip-click="onChipClick"
+      />
       <!-- Сторона top -->
-      <div class="side top">
-        <div
-          v-for="idx in topIndices"
-          :key="idx"
-          class="cell"
-          :class="{ safe: !!board.cells[idx]?.safe, highlighted: isCellHighlighted(idx) }"
-        >
-          <div class="cell-content">
-            <div class="place-cells">
-              <div
-                v-for="placeNum in board.cells[idx]?.size"
-                :key="placeNum"
-                class="place"
-                :class="{
-                  [`chip-${board.cells[idx]?.places[placeNum - 1]?.player.color}`]:
-                    !!board.cells[idx]?.places[placeNum - 1],
-                  available: isChipAvailable(board.cells[idx]?.places[placeNum - 1]),
-                  finished: isChipFinished(board.cells[idx]?.places[placeNum - 1]),
-                }"
-                :data-chip-id="board.cells[idx]?.places[placeNum - 1]?.id"
-                @click="onChipClick(board.cells[idx]?.places[placeNum - 1])"
-              ></div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <SideBoard
+        side="top"
+        :indices="topIndices"
+        :board="board"
+        :available-chip-ids="availableChipIdsArray"
+        :highlighted-cells="highlightedCellsArray"
+        @chip-click="onChipClick"
+      />
       <!-- Угол top-right -->
-      <div class="corner corner-top-right" :style="{ backgroundColor: players[1]?.color }">
-        <div class="start-cells">
-          <div
-            v-for="chip in players[1]?.boards[0]?.cells[0]?.places"
-            :key="chip?.id"
-            class="place"
-            :class="{
-              [`chip-${chip?.player.color}`]: !!chip,
-              available: isChipAvailable(chip),
-              finished: isChipFinished(chip),
-            }"
-            @click="onChipClick(chip)"
-          ></div>
-        </div>
-      </div>
+      <CornerBoard
+        corner="top-right"
+        :player="players[1] ?? null"
+        :available-chip-ids="availableChipIdsArray"
+        @chip-click="onChipClick"
+      />
       <!-- Сторона left -->
-      <div class="side left">
-        <div
-          v-for="idx in leftIndices"
-          :key="idx"
-          class="cell"
-          :class="{ safe: !!board.cells[idx]?.safe, highlighted: isCellHighlighted(idx) }"
-        >
-          <div class="cell-content">
-            <div class="place-cells">
-              <div
-                v-for="placeNum in board.cells[idx]?.size"
-                :key="placeNum"
-                class="place"
-                :class="{
-                  [`chip-${board.cells[idx]?.places[placeNum - 1]?.player.color}`]:
-                    !!board.cells[idx]?.places[placeNum - 1],
-                  available: isChipAvailable(board.cells[idx]?.places[placeNum - 1]),
-                  finished: isChipFinished(board.cells[idx]?.places[placeNum - 1]),
-                }"
-                :data-chip-id="board.cells[idx]?.places[placeNum - 1]?.id"
-                @click="onChipClick(board.cells[idx]?.places[placeNum - 1])"
-              ></div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <SideBoard
+        side="left"
+        :indices="leftIndices"
+        :board="board"
+        :available-chip-ids="availableChipIdsArray"
+        :highlighted-cells="highlightedCellsArray"
+        @chip-click="onChipClick"
+      />
       <!-- Центр -->
       <div class="center">
         <div class="home-areas">
@@ -101,119 +47,48 @@
         </div>
         <!-- Финишные дорожки -->
         <div class="finish-tracks">
-          <div
+          <FinishTrack
             v-for="(finishBoard, idx) in finishBoards"
             :key="idx"
-            class="finish-track"
-            :style="{ '--player-color': players[idx]?.color }"
-          >
-            <div
-              v-for="(cell, cellIdx) in finishBoard.cells"
-              :key="cellIdx"
-              class="finish-cell"
-              :class="{ available: isChipAvailable(cell.places[0]) }"
-              @click="onChipClick(cell.places[0])"
-            >
-              <div
-                v-for="placeNum in cell.size"
-                :key="placeNum"
-                class="place"
-                :class="{
-                  [`chip-${cell.places[placeNum - 1]?.player.color}`]: !!cell.places[placeNum - 1],
-                  available: isChipAvailable(cell.places[placeNum - 1]),
-                  finished: isChipFinished(cell.places[placeNum - 1]),
-                }"
-              ></div>
-            </div>
-          </div>
+            :finish-board="finishBoard"
+            :player-color="players[idx]?.color ?? ''"
+            :available-chip-ids="availableChipIdsArray"
+            @chip-click="onChipClick"
+          />
         </div>
       </div>
       <!-- Сторона right -->
-      <div class="side right">
-        <div
-          v-for="idx in rightIndices"
-          :key="idx"
-          class="cell"
-          :class="{ safe: !!board.cells[idx]?.safe, highlighted: isCellHighlighted(idx) }"
-        >
-          <div class="cell-content">
-            <div class="place-cells">
-              <div
-                v-for="placeNum in board.cells[idx]?.size"
-                :key="placeNum"
-                class="place"
-                :class="{
-                  [`chip-${board.cells[idx]?.places[placeNum - 1]?.player.color}`]:
-                    !!board.cells[idx]?.places[placeNum - 1],
-                  available: isChipAvailable(board.cells[idx]?.places[placeNum - 1]),
-                  finished: isChipFinished(board.cells[idx]?.places[placeNum - 1]),
-                }"
-                :data-chip-id="board.cells[idx]?.places[placeNum - 1]?.id"
-                @click="onChipClick(board.cells[idx]?.places[placeNum - 1])"
-              ></div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <SideBoard
+        side="right"
+        :indices="rightIndices"
+        :board="board"
+        :available-chip-ids="availableChipIdsArray"
+        :highlighted-cells="highlightedCellsArray"
+        @chip-click="onChipClick"
+      />
       <!-- Угол bottom-left -->
-      <div class="corner corner-bottom-left" :style="{ backgroundColor: players[3]?.color }">
-        <div class="start-cells">
-          <div
-            v-for="chip in players[3]?.boards[0]?.cells[0]?.places"
-            :key="chip?.id"
-            class="place"
-            :class="{
-              [`chip-${chip?.player.color}`]: !!chip,
-              available: isChipAvailable(chip),
-              finished: isChipFinished(chip),
-            }"
-            @click="onChipClick(chip)"
-          ></div>
-        </div>
-      </div>
+      <CornerBoard
+        corner="bottom-left"
+        :player="players[3] ?? null"
+        :available-chip-ids="availableChipIdsArray"
+        @chip-click="onChipClick"
+      />
       <!-- Сторона bottom -->
-      <div class="side bottom">
-        <div
-          v-for="idx in bottomIndices"
-          :key="idx"
-          class="cell"
-          :class="{ safe: !!board.cells[idx]?.safe, highlighted: isCellHighlighted(idx) }"
-        >
-          <div class="cell-content">
-            <div class="place-cells">
-              <div
-                v-for="placeNum in board.cells[idx]?.size"
-                :key="placeNum"
-                class="place"
-                :class="{
-                  [`chip-${board.cells[idx]?.places[placeNum - 1]?.player.color}`]:
-                    !!board.cells[idx]?.places[placeNum - 1],
-                  available: isChipAvailable(board.cells[idx]?.places[placeNum - 1]),
-                  finished: isChipFinished(board.cells[idx]?.places[placeNum - 1]),
-                }"
-                :data-chip-id="board.cells[idx]?.places[placeNum - 1]?.id"
-                @click="onChipClick(board.cells[idx]?.places[placeNum - 1])"
-              ></div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <SideBoard
+        side="bottom"
+        :indices="bottomIndices"
+        :board="board"
+        :available-chip-ids="availableChipIdsArray"
+        :highlighted-cells="highlightedCellsArray"
+        @chip-click="onChipClick"
+      />
       <!-- Угол bottom-right -->
-      <div class="corner corner-bottom-right" :style="{ backgroundColor: players[2]?.color }">
-        <div class="start-cells">
-          <div
-            v-for="chip in players[2]?.boards[0]?.cells[0]?.places"
-            :key="chip?.id"
-            class="place"
-            :class="{
-              [`chip-${chip?.player.color}`]: !!chip,
-              available: isChipAvailable(chip),
-              finished: isChipFinished(chip),
-            }"
-            @click="onChipClick(chip)"
-          ></div>
-        </div>
-      </div>
+      <CornerBoard
+        corner="bottom-right"
+        :player="players[2] ?? null"
+        :available-chip-ids="availableChipIdsArray"
+        @chip-click="onChipClick"
+      />
     </div>
   </div>
 </template>
@@ -224,6 +99,9 @@ import { Board } from 'src/lib/board';
 import { usePlayerStore } from 'src/stores/player';
 import { firstElement, lastElement } from 'src/utils/array';
 import type { Chip } from 'src/lib/chip';
+import SideBoard from './SideBoard.vue';
+import CornerBoard from './CornerBoard.vue';
+import FinishTrack from './FinishTrack.vue';
 
 const { items: players } = usePlayerStore();
 
@@ -296,21 +174,11 @@ const homeAreasOrdered = computed(() => [
   players[2]!, // red -> bottom-right
 ]);
 
-function isChipAvailable(chip: Chip | null | undefined): boolean {
-  if (!chip) return false;
-  return props.availableChipIds?.includes(chip.id) ?? false;
-}
+const availableChipIdsArray = computed(() => props.availableChipIds ?? []);
+const highlightedCellsArray = computed(() => props.highlightedCells ?? []);
 
-function isChipFinished(chip: Chip | null | undefined): boolean {
-  return chip?.finished ?? false;
-}
-
-function isCellHighlighted(index: number): boolean {
-  return props.highlightedCells?.includes(index) ?? false;
-}
-
-function onChipClick(chip: Chip | null | undefined) {
-  if (chip && isChipAvailable(chip)) {
+function onChipClick(chip: Chip) {
+  if (chip && props.availableChipIds?.includes(chip.id)) {
     emit('chipClick', chip);
   }
 }
@@ -376,92 +244,34 @@ function onChipClick(chip: Chip | null | undefined) {
   width: 60px;
 }
 
-.cell {
-  width: 40px;
-  height: 40px;
-  margin: 2px;
-  background-color: #f0f0f0;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s;
+.corner {
+  width: 100px;
+  height: 100px;
+  border: 2px solid #333;
+  border-radius: 10px;
+  opacity: 0.8;
 }
 
-.cell:hover {
-  background-color: #e0e0e0;
-  transform: scale(1.05);
+.corner-top-left {
+  grid-column: 1;
+  grid-row: 1;
 }
 
-.cell.safe {
-  background-color: #a0d8ff;
-  border-color: #007acc;
+.corner-top-right {
+  grid-column: 3;
+  grid-row: 1;
 }
 
-.cell.highlighted {
-  background-color: #ffeb3b;
-  box-shadow: 0 0 8px 3px orange;
-  border-color: #ff9800;
+.corner-bottom-left {
+  grid-column: 1;
+  grid-row: 3;
 }
 
-.cell-content {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+.corner-bottom-right {
+  grid-column: 3;
+  grid-row: 3;
 }
 
-.place-cells {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2px;
-  margin: 2px 0;
-}
-
-.place {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background-color: #fff;
-  cursor: pointer;
-}
-
-.place.chip-green {
-  border: 1px solid white;
-  background-color: green;
-}
-
-.place.chip-yellow {
-  border: 1px solid black;
-  background-color: #ffcc00;
-}
-
-.place.chip-red {
-  border: 1px solid white;
-  background-color: red;
-}
-
-.place.chip-blue {
-  border: 1px solid white;
-  background-color: blue;
-}
-
-.place.available {
-  box-shadow: 0 0 5px 2px gold;
-  border-radius: 2px;
-}
-
-.place.finished {
-  opacity: 0.5;
-  filter: grayscale(70%);
-  border: 1px dashed #333;
-}
 .center {
   grid-column: 2;
   grid-row: 2;
@@ -485,14 +295,6 @@ function onChipClick(chip: Chip | null | undefined) {
 .home-area {
   border-radius: 10px;
   opacity: 0.7;
-}
-.start-cells {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 4px;
-  padding: 5px;
 }
 
 .finish-tracks {
@@ -560,33 +362,5 @@ function onChipClick(chip: Chip | null | undefined) {
 .finish-cell .place {
   width: 10px;
   height: 10px;
-}
-
-.corner {
-  width: 100px;
-  height: 100px;
-  border: 2px solid #333;
-  border-radius: 10px;
-  opacity: 0.8;
-}
-
-.corner-top-left {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.corner-top-right {
-  grid-column: 3;
-  grid-row: 1;
-}
-
-.corner-bottom-left {
-  grid-column: 1;
-  grid-row: 3;
-}
-
-.corner-bottom-right {
-  grid-column: 3;
-  grid-row: 3;
 }
 </style>
