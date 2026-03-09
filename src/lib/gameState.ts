@@ -19,7 +19,7 @@ export interface GameState {
  */
 export type GameAction =
   | { type: 'ROLL_DICE' }
-  | { type: 'USE_DIE'; index: number }
+  | { type: 'USE_DICE'; index: number }
   | { type: 'MOVE_CHIP'; chipId: number; steps: number; dieIndex: number }
   | { type: 'NEXT_TURN' }
   | { type: 'ADD_BONUS'; bonus: number }
@@ -54,7 +54,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         usedDice: [false, false],
       };
     }
-    case 'USE_DIE': {
+    case 'USE_DICE': {
       const { index } = action;
       const usedDice = [...state.usedDice];
       if (index === -1) {

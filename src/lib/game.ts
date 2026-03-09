@@ -81,7 +81,7 @@ export class Game {
   /**
    * Использовать кубик по индексу (0 или 1) или сумму (индекс -1)
    */
-  useDie(index: number): boolean {
+  useDice(index: number): boolean {
     if (index === -1) {
       // использование суммы означает использование обоих кубиков
       if (this.usedDice[0] || this.usedDice[1]) return false;
@@ -376,7 +376,7 @@ export class Game {
       );
     } else {
       // Используем кубик
-      if (!this.useDie(dieIndex)) {
+      if (!this.useDice(dieIndex)) {
         return false;
       }
     }
