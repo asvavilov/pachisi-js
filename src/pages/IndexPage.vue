@@ -132,6 +132,23 @@ function rollDice() {
   diceStore.drop();
   syncDice();
   selectedChip.value = null;
+
+  // Проверка на отсутствие доступных ходов
+  const allChipsOnBase = game.value.currentPlayer.chips.every((chip) => chip.cell?.board.ind === 0);
+  const diceHasSix = game.value.diceValues.includes(6);
+  if (allChipsOnBase && diceHasSix) {
+    // Особый случай: все фишки на базе и выпало 6 — дополнительный бросок
+    // Сбрасываем состояние броска, чтобы игрок мог бросить снова
+    game.value.hasRolled = false;
+    game.value.diceValues = [];
+    game.value.usedDice = [false, false];
+    diceStore.reset();
+    console.log('Все фишки на базе, выпало 6 — дополнительный бросок');
+  } else if (game.value.getMovableChips().length === 0) {
+    // Нет доступных ходов — пропускаем ход
+    console.log('Нет доступных ходов, пропускаем ход');
+    finishTurn();
+  }
 }
 
 // Переместить конкретную фишку на заданное количество шагов
