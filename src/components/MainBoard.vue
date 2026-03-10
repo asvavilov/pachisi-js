@@ -1,95 +1,93 @@
 <template>
-  <div class="board-wrapper">
-    <div class="board">
-      <!-- Угол top-left -->
-      <CornerBoard
-        corner="top-left"
-        :player="players[0] ?? null"
-        :available-chip-ids="availableChipIdsArray"
-        @chip-click="onChipClick"
-      />
-      <!-- Сторона top -->
-      <SideBoard
-        side="top"
-        :indices="topIndices"
-        :board="board"
-        :available-chip-ids="availableChipIdsArray"
-        :highlighted-cells="highlightedCellsArray"
-        @chip-click="onChipClick"
-      />
-      <!-- Угол top-right -->
-      <CornerBoard
-        corner="top-right"
-        :player="players[1] ?? null"
-        :available-chip-ids="availableChipIdsArray"
-        @chip-click="onChipClick"
-      />
-      <!-- Сторона left -->
-      <SideBoard
-        side="left"
-        :indices="leftIndices"
-        :board="board"
-        :available-chip-ids="availableChipIdsArray"
-        :highlighted-cells="highlightedCellsArray"
-        @chip-click="onChipClick"
-      />
-      <!-- Центр -->
-      <div class="center">
-        <div class="home-areas">
-          <div
-            v-for="player in homeAreasOrdered"
-            :key="player.color"
-            class="home-area"
-            :style="{ backgroundColor: player.color }"
-          >
-            <!-- дома игроков (пустые) -->
-          </div>
-        </div>
-        <!-- Финишные дорожки -->
-        <div class="finish-tracks">
-          <FinishTrack
-            v-for="(finishBoard, idx) in finishBoards"
-            :key="idx"
-            :finish-board="finishBoard"
-            :player-color="players[idx]?.color ?? ''"
-            :available-chip-ids="availableChipIdsArray"
-            @chip-click="onChipClick"
-          />
+  <div class="board">
+    <!-- Угол top-left -->
+    <CornerBoard
+      corner="top-left"
+      :player="players[0] ?? null"
+      :available-chip-ids="availableChipIdsArray"
+      @chip-click="onChipClick"
+    />
+    <!-- Сторона top -->
+    <SideBoard
+      side="top"
+      :indices="topIndices"
+      :board="board"
+      :available-chip-ids="availableChipIdsArray"
+      :highlighted-cells="highlightedCellsArray"
+      @chip-click="onChipClick"
+    />
+    <!-- Угол top-right -->
+    <CornerBoard
+      corner="top-right"
+      :player="players[1] ?? null"
+      :available-chip-ids="availableChipIdsArray"
+      @chip-click="onChipClick"
+    />
+    <!-- Сторона left -->
+    <SideBoard
+      side="left"
+      :indices="leftIndices"
+      :board="board"
+      :available-chip-ids="availableChipIdsArray"
+      :highlighted-cells="highlightedCellsArray"
+      @chip-click="onChipClick"
+    />
+    <!-- Центр -->
+    <div class="center">
+      <div class="home-areas">
+        <div
+          v-for="player in homeAreasOrdered"
+          :key="player.color"
+          class="home-area"
+          :style="{ backgroundColor: player.color }"
+        >
+          <!-- дома игроков (пустые) -->
         </div>
       </div>
-      <!-- Сторона right -->
-      <SideBoard
-        side="right"
-        :indices="rightIndices"
-        :board="board"
-        :available-chip-ids="availableChipIdsArray"
-        :highlighted-cells="highlightedCellsArray"
-        @chip-click="onChipClick"
-      />
-      <!-- Угол bottom-left -->
-      <CornerBoard
-        corner="bottom-left"
-        :player="players[3] ?? null"
-        :available-chip-ids="availableChipIdsArray"
-        @chip-click="onChipClick"
-      />
-      <!-- Сторона bottom -->
-      <SideBoard
-        side="bottom"
-        :indices="bottomIndices"
-        :board="board"
-        :available-chip-ids="availableChipIdsArray"
-        :highlighted-cells="highlightedCellsArray"
-        @chip-click="onChipClick"
-      />
-      <!-- Угол bottom-right -->
-      <CornerBoard
-        corner="bottom-right"
-        :player="players[2] ?? null"
-        :available-chip-ids="availableChipIdsArray"
-        @chip-click="onChipClick"
-      />
+      <!-- Финишные дорожки -->
+      <div class="finish-tracks">
+        <FinishTrack
+          v-for="(finishBoard, idx) in finishBoards"
+          :key="idx"
+          :finish-board="finishBoard"
+          :player-color="players[idx]?.color ?? ''"
+          :available-chip-ids="availableChipIdsArray"
+          @chip-click="onChipClick"
+        />
+      </div>
     </div>
+    <!-- Сторона right -->
+    <SideBoard
+      side="right"
+      :indices="rightIndices"
+      :board="board"
+      :available-chip-ids="availableChipIdsArray"
+      :highlighted-cells="highlightedCellsArray"
+      @chip-click="onChipClick"
+    />
+    <!-- Угол bottom-left -->
+    <CornerBoard
+      corner="bottom-left"
+      :player="players[3] ?? null"
+      :available-chip-ids="availableChipIdsArray"
+      @chip-click="onChipClick"
+    />
+    <!-- Сторона bottom -->
+    <SideBoard
+      side="bottom"
+      :indices="bottomIndices"
+      :board="board"
+      :available-chip-ids="availableChipIdsArray"
+      :highlighted-cells="highlightedCellsArray"
+      @chip-click="onChipClick"
+    />
+    <!-- Угол bottom-right -->
+    <CornerBoard
+      corner="bottom-right"
+      :player="players[2] ?? null"
+      :available-chip-ids="availableChipIdsArray"
+      @chip-click="onChipClick"
+    />
   </div>
 </template>
 
@@ -185,91 +183,12 @@ function onChipClick(chip: Chip) {
 </script>
 
 <style scoped>
-.board-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 20px;
-}
-
 .board {
   display: grid;
   grid-template-columns: 100px 1fr 100px;
   grid-template-rows: 100px 1fr 100px;
-  width: 800px;
-  height: 800px;
   gap: 2px;
   position: relative;
-}
-
-.side {
-  display: flex;
-  background-color: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-}
-
-.side.top {
-  grid-column: 2;
-  grid-row: 1;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  height: 60px;
-}
-
-.side.right {
-  grid-column: 3;
-  grid-row: 2;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  width: 60px;
-}
-
-.side.bottom {
-  grid-column: 2;
-  grid-row: 3;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  height: 60px;
-}
-
-.side.left {
-  grid-column: 1;
-  grid-row: 2;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  width: 60px;
-}
-
-.corner {
-  width: 100px;
-  height: 100px;
-  border: 2px solid #333;
-  border-radius: 10px;
-  opacity: 0.8;
-}
-
-.corner-top-left {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.corner-top-right {
-  grid-column: 3;
-  grid-row: 1;
-}
-
-.corner-bottom-left {
-  grid-column: 1;
-  grid-row: 3;
-}
-
-.corner-bottom-right {
-  grid-column: 3;
-  grid-row: 3;
 }
 
 .center {

@@ -75,28 +75,24 @@ function onChipClick(chip: Chip | null | undefined) {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  height: 60px;
 }
 
 .side.right {
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  width: 60px;
 }
 
 .side.bottom {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  height: 60px;
 }
 
 .side.left {
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  width: 60px;
 }
 
 .cell {

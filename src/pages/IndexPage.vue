@@ -1,59 +1,66 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="row items-center q-gutter-md">
-      <button @click="rollDice" :disabled="!canRollDice">Бросить кости</button>
-      <span v-if="game.diceValues.length" class="q-ml-md">
-        Кости: {{ game.diceValues }} (сумма: {{ game.diceSum }})
-        <span v-if="!game.allDiceUsed"> (использовано: {{ usedDiceText }})</span>
-        <span v-if="currentBonusSteps.length > 0" class="q-ml-md" style="color: green">
-          Бонусы доступны: {{ currentBonusSteps.map((s) => `+${s}`).join(', ') }}
-        </span>
-      </span>
-    </div>
-    <div class="info-panel q-pa-md q-mb-md" style="background-color: #f0f0f0; border-radius: 8px">
-      <div class="text-h6">Ход игры</div>
-      <div class="row items-center q-gutter-lg">
+    <div class="row">
+      <div class="col-auto">
+        <MainBoard
+          :available-chip-ids="availableChipIds"
+          :highlighted-cells="highlightedCellIndices"
+          @chip-click="onChipClick"
+        />
+      </div>
+      <div class="col">
         <div>
-          <strong>Текущий игрок:</strong>
-          <span class="q-ml-sm" :style="{ color: currentPlayerColor }">
-            {{ currentPlayerColor }} (игрок {{ currentPlayerIndex + 1 }})
+          <button @click="rollDice" :disabled="!canRollDice">Бросить кости</button>
+          <span v-if="game.diceValues.length" class="q-ml-md">
+            Кости: {{ game.diceValues }} (сумма: {{ game.diceSum }})
+            <span v-if="!game.allDiceUsed"> (использовано: {{ usedDiceText }})</span>
+            <span v-if="currentBonusSteps.length > 0" class="q-ml-md" style="color: green">
+              Бонусы доступны: {{ currentBonusSteps.map((s) => `+${s}`).join(', ') }}
+            </span>
           </span>
         </div>
-        <div v-if="game.diceValues.length">
-          <strong>Выпало:</strong>
-          <span class="q-ml-sm dice-values">
-            {{ game.diceValues.join(' и ') }} = сумма {{ game.diceSum }}
-          </span>
+        <div
+          class="info-panel q-pa-md q-mb-md"
+          style="background-color: #f0f0f0; border-radius: 8px"
+        >
+          <div class="text-h6">Ход игры</div>
+          <div class="row items-center q-gutter-lg">
+            <div>
+              <strong>Текущий игрок:</strong>
+              <span class="q-ml-sm" :style="{ color: currentPlayerColor }">
+                {{ currentPlayerColor }} (игрок {{ currentPlayerIndex + 1 }})
+              </span>
+            </div>
+            <div v-if="game.diceValues.length">
+              <strong>Выпало:</strong>
+              <span class="q-ml-sm dice-values">
+                {{ game.diceValues.join(' и ') }} = сумма {{ game.diceSum }}
+              </span>
+            </div>
+            <div v-else>
+              <strong>Бросьте кости</strong>
+            </div>
+          </div>
         </div>
-        <div v-else>
-          <strong>Бросьте кости</strong>
+
+        <div v-if="selectedChip" class="q-mt-md selected-chip-panel">
+          <strong>Выбрана фишка</strong> (позиция: {{ selectedChip.cell?.board.ind }})
+          <div v-for="step in availableStepsForSelectedChip" :key="step" class="q-mt-xs">
+            <button @click="moveChip(selectedChip, step)">Двинуть на {{ step }}</button>
+          </div>
+          <button @click="selectedChip = null">Отмена</button>
+        </div>
+        <div v-else class="q-mt-md">
+          <strong>Доступные фишки:</strong> {{ movableChips.length }}
+          <span v-if="movableChips.length === 0">Нет доступных ходов</span>
+        </div>
+
+        <div v-if="game.allDiceUsed && game.diceValues.length" class="q-mt-md">
+          <strong>Все кубики использованы. Ход завершён.</strong>
+          <button @click="finishTurn">Завершить ход</button>
         </div>
       </div>
     </div>
-
-    <div v-if="selectedChip" class="q-mt-md selected-chip-panel">
-      <strong>Выбрана фишка</strong> (позиция: {{ selectedChip.cell?.board.ind }})
-      <div v-for="step in availableStepsForSelectedChip" :key="step" class="q-mt-xs">
-        <button @click="moveChip(selectedChip, step)">Двинуть на {{ step }}</button>
-      </div>
-      <button @click="selectedChip = null">Отмена</button>
-    </div>
-
-    <div v-else class="q-mt-md">
-      <strong>Доступные фишки:</strong> {{ movableChips.length }}
-      <span v-if="movableChips.length === 0">Нет доступных ходов</span>
-    </div>
-
-    <div v-if="game.allDiceUsed && game.diceValues.length" class="q-mt-md">
-      <strong>Все кубики использованы. Ход завершён.</strong>
-      <button @click="finishTurn">Завершить ход</button>
-    </div>
-
-    <MainBoard
-      :available-chip-ids="availableChipIds"
-      :highlighted-cells="highlightedCellIndices"
-      @chip-click="onChipClick"
-    />
   </q-page>
 </template>
 
