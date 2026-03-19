@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { Player } from 'src/lib/player';
+import { Player, PlayerColor } from 'src/lib/player';
 import { ref } from 'vue';
 
 /**
@@ -7,10 +7,10 @@ import { ref } from 'vue';
  */
 export const usePlayerStore = defineStore('player', () => {
   const items = ref<Player[]>([
-    new Player(0, false, 'green'),
-    new Player(1, true, 'yellow'),
-    new Player(2, true, 'red'),
-    new Player(3, true, 'blue'),
+    new Player(0, false, PlayerColor.yellow),
+    new Player(1, true, PlayerColor.blue),
+    new Player(2, true, PlayerColor.red),
+    new Player(3, true, PlayerColor.green),
   ]);
 
   return {

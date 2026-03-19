@@ -1,18 +1,30 @@
 import { Board } from './board';
 import { Chip } from './chip';
 
-export enum Color {
-  green = 'green',
+export type PlayerIndex = 0 | 1 | 2 | 3;
+
+export enum PlayerColor {
   yellow = 'yellow',
-  red = 'red',
   blue = 'blue',
+  red = 'red',
+  green = 'green',
 }
+
+const PlayerColors = [
+  PlayerColor.yellow,
+  PlayerColor.blue,
+  PlayerColor.red,
+  PlayerColor.green,
+] as const;
+
+export const playerColor = (playerIndex: PlayerIndex) => PlayerColors[playerIndex];
 
 /**
  * игрок
  */
 export class Player {
-  ind: number;
+  ind: PlayerIndex;
+  startOffset: number = 4;
   i_begin: number;
   /**
    * расстояние между пользователями
@@ -23,7 +35,7 @@ export class Player {
   color: string;
   chips: Chip[];
   boards: (Board | null)[];
-  constructor(ind: number, ai: boolean, color: string) {
+  constructor(ind: PlayerIndex, ai: boolean, color: string) {
     /**
      * глобальный номер игрока
      */
@@ -31,11 +43,11 @@ export class Player {
     /**
      * номер стартовой для текущего игрока ячейки на общей доске
      */
-    this.i_begin = this.q * ind;
+    this.i_begin = this.q * ind + this.startOffset;
     /**
      * номер конечной для текущего игрока ячейки на общей доске
      */
-    this.i_end = this.q * ind + 63;
+    this.i_end = this.q * ind + 63 + this.startOffset;
     /**
      * компьютер или человек (Artifical Intelligent)
      */
@@ -54,7 +66,7 @@ export class Player {
     this.boards = [
       new Board(0, this, 1, undefined, undefined, { 0: 4 }),
       null,
-      new Board(2, this, 8, undefined, undefined, { 7: 4 }),
+      new Board(2, this, 7, undefined, undefined, { 7: 4 }),
     ];
     // расставляем фишки
     this.chips.forEach((ch) => {

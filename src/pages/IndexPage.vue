@@ -66,7 +66,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import MainBoard from 'src/components/MainBoard.vue';
+import MainBoard from 'src/components/board/MainBoard.vue';
 import { useDiceStore } from 'src/stores/dice';
 import { usePlayerStore } from 'src/stores/player';
 import { Game } from 'src/lib/game';
