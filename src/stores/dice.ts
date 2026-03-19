@@ -6,27 +6,73 @@ import { computed, ref } from 'vue';
  */
 export const useDiceStore = defineStore('dice', () => {
   const count: number = 2;
-  const special: number = 6;
+  const startItem: number = 6;
+  const addonItem: number = 6;
+  const outVariant: number = 5;
 
   const items = ref<number[]>([]);
+  const used = ref<number[]>([]);
 
-  const drop = () => {
+  const sum = computed(() => items.value.reduce((acc, cur) => acc + cur, 0));
+  const unusedSum = computed(() => unused.value.reduce((acc, cur) => acc + cur, 0));
+
+  const roll = () => {
+    used.value = [];
     items.value = Array.from({ length: count }, () => Math.round(Math.random() * 5 + 1));
   };
 
-  const reset = () => {
-    items.value = [];
+  const use = (value: number) => {
+    const index = items.value.indexOf(value);
+    if (index !== -1) {
+      used.value.push(value);
+    } else if (value === unusedSum.value) {
+      used.value.push(...unused.value);
+    }
   };
 
-  const hasSpecial = computed(() => items.value.some((item) => item === special));
+  const unused = computed(() => {
+    return items.value.filter((item) => !used.value.includes(item));
+  });
 
-  const isEquals = computed(() => items.value.every((item) => item === items.value[0]));
+  const isAllUsed = computed(() => {
+    return used.value.length > 0 ? used.value.length === items.value.length : undefined;
+  });
+
+  const reset = () => {
+    items.value = [];
+    used.value = [];
+  };
+
+  const hasStart = computed(() => items.value.some((item) => item === startItem));
+
+  const hasAddon = computed(() => items.value.some((item) => item === addonItem));
+
+  const hasOut = computed(
+    () =>
+      items.value.some((item) => item === outVariant) ||
+      items.value.reduce((acc, cur) => acc + cur, 0) === outVariant,
+  );
+
+  const isEquals = computed(
+    () => items.value.length > 0 && items.value.every((item) => item === items.value[0]),
+  );
+
+  const rolled = computed(() => items.value.length > 0);
 
   return {
-    drop,
+    roll,
     reset,
-    hasSpecial,
+    hasStart,
+    hasAddon,
+    hasOut,
     isEquals,
     items,
+    used,
+    use,
+    unused,
+    isAllUsed,
+    sum,
+    unusedSum,
+    rolled,
   };
 });

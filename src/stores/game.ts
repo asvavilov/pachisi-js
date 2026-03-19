@@ -1,156 +1,126 @@
-import { Player } from './player';
-import type { Chip } from './chip';
-import type { Cell } from './cell';
+import { defineStore } from 'pinia';
+import { useDiceStore } from './dice';
+import { usePlayerStore } from './player';
+import type { Cell } from 'src/lib/cell';
+import type { Chip } from 'src/lib/chip';
+import { Player } from 'src/lib/player';
+import { computed, ref } from 'vue';
 
 /**
- * Состояние игры
+ * игра
  */
-export class Game {
-  players: Player[];
-  currentPlayerIndex: number = 0;
-  diceValues: number[] = [];
-  hasRolled: boolean = false;
-  usedDice: boolean[] = [false, false]; // отслеживание использованных кубиков
-  winner: Player | null = null; // победитель игры, если есть
-  currentBonusSteps: number[] = []; // бонусные шаги за захват в текущем ходе (10 или 20)
+export const useGameStore = defineStore('game', () => {
+  const playerStore = usePlayerStore();
+  const diceStore = useDiceStore();
 
-  constructor(players: Player[]) {
-    this.players = players;
-  }
+  const winner = ref<Player | null>(null); // победитель игры, если есть
+  const currentBonusSteps = ref<number[]>([]); // бонусные шаги за захват в текущем ходе (10 или 20)
 
-  /**
-   * Добавить бонусные шаги текущему игроку (только если это текущий игрок)
-   */
-  addBonus(steps: number) {
-    // Добавляем отдельный бонусный шаг (10 или 20) в массив
-    this.currentBonusSteps.push(steps);
-    console.log(
-      `Игрок получил бонус +${steps} шагов. Теперь бонусы: [${this.currentBonusSteps.join(', ')}]`,
+  const initGame = () => {
+    playerStore.init();
+    diceStore.reset();
+  };
+
+  const canRollDice = computed(() => {
+    // TODO когда можно бросать кости:
+    // - еще не брошены
+    // - нет доступных ходов или все использованы (и выпали дубли)
+    return (
+      !diceStore.rolled ||
+      ((diceStore.isAllUsed || movableChips.value.length === 0) && diceStore.isEquals)
     );
-  }
+  });
+
+  const rollDice = () => {
+    prepareRollDice();
+
+    diceStore.roll();
+
+    if (!movableChips.value.length) {
+      if (playerStore.canAddon) {
+        prepareAddon();
+      } else {
+        nextPlayer();
+      }
+    }
+  };
+
+  const prepareRollDice = () => {
+    // Сбрасываем бонусы текущего хода
+    currentBonusSteps.value = [];
+    selectedChip.value = null;
+  };
 
   /**
-   * Бросок костей
+   * подготовка дополнительного броска
    */
-  rollDice(): number[] {
-    this.diceValues = Array.from({ length: 2 }, () => Math.floor(Math.random() * 6) + 1);
-    this.hasRolled = true;
-    this.usedDice = [false, false];
-    console.log(`Игрок ${this.currentPlayer.color} бросил кости: ${this.diceValues.join(' и ')}`);
-    return this.diceValues;
-  }
+  const prepareAddon = () => {
+    //diceStore.reset();
+
+    prepareRollDice();
+  };
 
   /**
-   * Получить текущего игрока
+   * переход хода к следующему игроку
    */
-  get currentPlayer(): Player {
-    return this.players[this.currentPlayerIndex]!;
-  }
+  const nextPlayer = () => {
+    diceStore.reset();
+    playerStore.next();
 
-  /**
-   * Получить сумму костей
-   */
-  get diceSum(): number {
-    return this.diceValues.reduce((a, b) => a + b, 0);
-  }
+    prepareRollDice();
+  };
 
   /**
    * Получить доступные варианты шагов (неиспользованные кубики и сумму)
    */
-  getAvailableSteps(): number[] {
+  const getAvailableSteps = (): number[] => {
     const steps: number[] = [];
-    if (this.diceValues.length === 0) return steps;
-    if (this.diceValues.length >= 1 && !this.usedDice[0]) steps.push(this.diceValues[0]!);
-    if (this.diceValues.length >= 2 && !this.usedDice[1]) steps.push(this.diceValues[1]!);
+    if (diceStore.items.length === 0) return steps;
+    steps.push(...diceStore.unused);
     // Если оба кубика не использованы, можно предложить сумму
-    if (!this.usedDice[0] && !this.usedDice[1]) {
-      steps.push(this.diceSum);
+    if (diceStore.unusedSum && !steps.includes(diceStore.unusedSum)) {
+      steps.push(diceStore.unusedSum);
     }
     // Бонусные шаги (каждый бонус добавляется как отдельный шаг)
-    for (const bonus of this.currentBonusSteps) {
+    for (const bonus of currentBonusSteps.value) {
       steps.push(bonus);
     }
     return steps;
-  }
+  };
 
   /**
-   * Использовать кубик по индексу (0 или 1) или сумму (индекс -1)
+   * Получить список фишек, которые могут быть перемещены на любой из доступных шагов
    */
-  useDice(index: number): boolean {
-    if (index === -1) {
-      // использование суммы означает использование обоих кубиков
-      if (this.usedDice[0] || this.usedDice[1]) return false;
-      this.usedDice[0] = true;
-      this.usedDice[1] = true;
-      return true;
+  const getMovableChips = (): Chip[] => {
+    const steps = getAvailableSteps();
+    const movable: Chip[] = [];
+    for (const step of steps) {
+      movable.push(...getMovableChipsForSteps(step));
     }
-    if (index < 0 || index >= this.diceValues.length) return false;
-    if (this.usedDice[index]) return false;
-    this.usedDice[index] = true;
-    return true;
-  }
-
-  /**
-   * Проверка, все ли кубики использованы
-   */
-  get allDiceUsed(): boolean {
-    return this.usedDice.every((used) => used);
-  }
-
-  /**
-   * Переход хода к следующему игроку
-   */
-  nextTurn() {
-    console.log('---');
-    this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
-    this.diceValues = [];
-    this.hasRolled = false;
-    this.usedDice = [false, false];
-    // Сбрасываем бонусы текущего хода
-    this.currentBonusSteps = [];
-  }
+    // Убрать дубликаты (одна фишка может быть доступна для нескольких шагов)
+    return Array.from(new Set(movable));
+  };
 
   /**
    * Получить список фишек, которые могут быть перемещены на заданное количество шагов
    */
-  getMovableChipsForSteps(steps: number): Chip[] {
-    if (!this.hasRolled) return [];
-    const player = this.currentPlayer;
+  const getMovableChipsForSteps = (steps: number): Chip[] => {
+    const player = usePlayerStore().current!;
     const movable: Chip[] = [];
 
     for (const chip of player.chips) {
-      if (this.canMoveChip(chip, steps)) {
+      if (canMoveChip(chip, steps)) {
         movable.push(chip);
       }
     }
 
     return movable;
-  }
-
-  /**
-   * Получить список фишек, которые могут быть перемещены на любой из доступных шагов
-   */
-  getMovableChips(): Chip[] {
-    const steps = this.getAvailableSteps();
-    const movable: Chip[] = [];
-    for (const step of steps) {
-      movable.push(...this.getMovableChipsForSteps(step));
-    }
-    // Убрать дубликаты (одна фишка может быть доступна для нескольких шагов)
-    return Array.from(new Set(movable));
-  }
-
-  /**
-   * Получить возможные шаги для конкретной фишки
-   */
-  getPossibleStepsForChip(chip: Chip): number[] {
-    return this.getAvailableSteps().filter((step) => this.canMoveChip(chip, step));
-  }
+  };
 
   /**
    * Проверка, может ли фишка быть перемещена на заданное количество шагов
    */
-  canMoveChip(chip: Chip, steps: number): boolean {
+  const canMoveChip = (chip: Chip, steps: number): boolean => {
     // Если фишка финишировала, не может двигаться
     if (chip.finished) return false;
     // Если фишка ещё не на доске (в стартовой ячейке)
@@ -163,36 +133,14 @@ export class Game {
     // или на стартовой/конечной доске.
     // Реализуем простой поиск следующей ячейки через steps шагов.
     // Это временная реализация, позже нужно заменить на правильную логику.
-    const targetCell = this.findTargetCell(currentCell, steps, chip.player);
+    const targetCell = findTargetCell(currentCell, steps, chip.player);
     return targetCell !== null;
-  }
-
-  /**
-   * Получить промежуточные ячейки при движении от startCell на steps шагов по главной доске.
-   * Возвращает массив ячеек, через которые проходит фишка (исключая startCell, включая targetCell).
-   * Если движение происходит по финишной доске или стартовой, возвращает пустой массив.
-   */
-  private getIntermediateCells(startCell: Cell, steps: number): Cell[] {
-    if (startCell.board.ind !== 1) {
-      // Не главная доска - нет промежуточных ячеек (движение по финишной или стартовой доске)
-      return [];
-    }
-    const mainBoard = startCell.board;
-    const idx = mainBoard.cells.indexOf(startCell);
-    if (idx === -1) return [];
-    const totalCells = mainBoard.cells.length;
-    const cells: Cell[] = [];
-    for (let i = 1; i <= steps; i++) {
-      const newIdx = (idx + i) % totalCells;
-      cells.push(mainBoard.cells[newIdx]!);
-    }
-    return cells;
-  }
+  };
 
   /**
    * Найти целевую ячейку после steps шагов от текущей ячейки
    */
-  findTargetCell(from: Cell, steps: number, player?: Player): Cell | null {
+  const findTargetCell = (from: Cell, steps: number, player?: Player): Cell | null => {
     // Если игрок не передан, движение невозможно (но в вызывающем коде player всегда передаётся)
     if (!player) return null;
 
@@ -215,7 +163,7 @@ export class Game {
         return null; // ячейка занята
       }
       // Также проверяем, не заблокирована ли ячейка (блок из двух фишек одного цвета)
-      if (this.isCellBlocked(exitCell)) {
+      if (isCellBlocked(exitCell)) {
         return null;
       }
       return exitCell;
@@ -238,7 +186,7 @@ export class Game {
       const targetCell = currentCell.board.cells[newIdx]!;
       // Проверяем, не заблокирована ли целевая ячейка (на финишной доске блоки возможны?)
       // По правилам блоки на финишной доске не рассматриваются, но для безопасности проверим.
-      if (this.isCellBlocked(targetCell)) {
+      if (isCellBlocked(targetCell)) {
         return null;
       }
       return targetCell;
@@ -254,7 +202,7 @@ export class Game {
       if (remainingSteps === 1) {
         // Переход на финишную дорожку занимает один шаг
         const targetCell = currentCell.io;
-        if (this.isCellBlocked(targetCell)) {
+        if (isCellBlocked(targetCell)) {
           return null;
         }
         return targetCell;
@@ -286,25 +234,66 @@ export class Game {
     }
 
     // 6. Проверка блокировки: нельзя остановиться на заблокированной ячейке
-    if (this.isCellBlocked(targetCell)) {
+    if (isCellBlocked(targetCell)) {
       return null;
     }
 
     // 7. Проверка блокировки пути: нельзя пройти через заблокированную ячейку
-    const intermediateCells = this.getIntermediateCells(currentCell, steps);
+    const intermediateCells = getIntermediateCells(currentCell, steps);
     for (const cell of intermediateCells) {
-      if (this.isCellBlocked(cell)) {
+      if (isCellBlocked(cell)) {
         return null;
       }
     }
 
     return targetCell;
-  }
+  };
+
+  /**
+   * Добавить бонусные шаги текущему игроку (только если это текущий игрок)
+   */
+  const addBonus = (steps: number) => {
+    // Добавляем отдельный бонусный шаг (10 или 20) в массив
+    currentBonusSteps.value.push(steps);
+    console.log(
+      `Игрок получил бонус +${steps} шагов. Теперь бонусы: [${currentBonusSteps.value.join(', ')}]`,
+    );
+  };
+
+  /**
+   * Получить возможные шаги для конкретной фишки
+   */
+  const getPossibleStepsForChip = (chip: Chip): number[] => {
+    return [...new Set(getAvailableSteps().filter((step) => canMoveChip(chip, step)))];
+  };
+
+  /**
+   * Получить промежуточные ячейки при движении от startCell на steps шагов по главной доске.
+   * Возвращает массив ячеек, через которые проходит фишка (исключая startCell, включая targetCell).
+   * Если движение происходит по финишной доске или стартовой, возвращает пустой массив.
+   */
+  const getIntermediateCells = (startCell: Cell, steps: number): Cell[] => {
+    if (startCell.board.ind !== 1) {
+      // Не главная доска - нет промежуточных ячеек (движение по финишной или стартовой доске)
+      return [];
+    }
+    const mainBoard = startCell.board;
+    const idx = mainBoard.cells.indexOf(startCell);
+    if (idx === -1) return [];
+    const totalCells = mainBoard.cells.length;
+    const cells: Cell[] = [];
+    for (let i = 1; i <= steps; i++) {
+      const newIdx = (idx + i) % totalCells;
+      const cell = mainBoard.cells[newIdx]!;
+      cells.push(cell);
+    }
+    return cells;
+  };
 
   /**
    * Проверка, является ли ячейка безопасной (защищает от захвата) для заданного игрока
    */
-  isSafeCell(cell: Cell, forPlayer?: Player): boolean {
+  const isSafeCell = (cell: Cell, forPlayer?: Player): boolean => {
     const safe = cell.safe;
     if (safe === true) {
       return true; // общая безопасная ячейка
@@ -318,7 +307,7 @@ export class Game {
       return safe === forPlayer;
     }
     return false; // не безопасна
-  }
+  };
 
   /**
    * Проверка, является ли ячейка заблокированной (блок)
@@ -326,7 +315,7 @@ export class Game {
    * - две фишки одного цвета на любой ячейке общей дорожки
    * - две фишки разного цвета на безопасной ячейке или на выходе из базы
    */
-  isCellBlocked(cell: Cell): boolean {
+  const isCellBlocked = (cell: Cell): boolean => {
     const places = cell.places.filter((p) => p !== null);
     if (places.length < 2) {
       return false; // меньше двух фишек - не блок
@@ -338,44 +327,40 @@ export class Game {
       return true; // блок из одинаковых цветов
     }
     // Если фишки разного цвета, проверяем, является ли ячейка безопасной или выходом из базы
-    const isSafe = this.isSafeCell(cell);
+    const isSafe = isSafeCell(cell);
     if (isSafe) {
       return true; // блок из разных цветов на безопасной ячейке
     }
     // Также выход из базы (safe instanceof Player) считается безопасной ячейкой, уже покрыто isSafeCell
     return false;
-  }
+  };
 
   /**
    * Переместить фишку на steps шагов с использованием соответствующего кубика
    * @param chip Фишка
    * @param steps Количество шагов (должно соответствовать одному из доступных шагов)
-   * @param diceIndex Индекс кубика (0,1) или -1 для суммы
    */
-  moveChip(chip: Chip, steps: number, diceIndex: number): boolean {
-    if (!this.canMoveChip(chip, steps)) {
+  const moveChip = (chip: Chip, steps: number): boolean => {
+    if (!canMoveChip(chip, steps)) {
       return false;
     }
     // Проверяем, что выбранный шаг соответствует доступному кубику
-    const availableSteps = this.getAvailableSteps();
+    const availableSteps = getAvailableSteps();
     if (!availableSteps.includes(steps)) {
       return false;
     }
     // Определяем, является ли шаг бонусным (10 или 20)
-    const bonusIndex = this.currentBonusSteps.indexOf(steps);
+    const bonusIndex = currentBonusSteps.value.indexOf(steps);
     if (bonusIndex !== -1) {
       // Используем бонусный шаг
-      this.currentBonusSteps.splice(bonusIndex, 1);
+      currentBonusSteps.value.splice(bonusIndex, 1);
       console.log(
-        `Игрок ${this.currentPlayer.color} использовал бонус +${steps} шагов. Осталось бонусов: ${this.currentBonusSteps.length}`,
+        `Игрок ${usePlayerStore().current!.color} использовал бонус +${steps} шагов. Осталось бонусов: ${currentBonusSteps.value.length}`,
       );
     } else {
-      // Используем кубик
-      if (!this.useDice(diceIndex)) {
-        return false;
-      }
+      diceStore.use(steps);
     }
-    const targetCell = this.findTargetCell(chip.cell!, steps, chip.player);
+    const targetCell = findTargetCell(chip.cell!, steps, chip.player);
     if (!targetCell) {
       // Откат использования кубика? Пока просто вернём false, но кубик уже использован
       // Для простоты не будем делать откат, т.к. это маловероятно
@@ -387,19 +372,19 @@ export class Game {
     const otherChips = targetCell.places.filter((p) => p && p.player !== chip.player);
     let captured = false;
     if (otherChips.length > 0) {
-      const isSafe = this.isSafeCell(targetCell, chip.player);
+      const isSafe = isSafeCell(targetCell, chip.player);
       if (!isSafe) {
         // Отправляем все чужие фишки на старт
         for (const otherChip of otherChips) {
           if (otherChip) {
             console.log(`Захват! Фишка игрока ${otherChip.player.color} отправлена на старт.`);
-            this.sendToStart(otherChip);
+            sendToStart(otherChip);
             captured = true;
           }
         }
         // Начисляем бонус +20 за захват
         if (captured) {
-          this.addBonus(20);
+          addBonus(20);
         }
       }
     }
@@ -407,6 +392,7 @@ export class Game {
     // Выполняем перемещение
     console.log(`Игрок ${chip.player.color} переместил фишку на ${steps} шагов.`);
     chip.go(targetCell);
+    selectedChip.value = null;
 
     // Проверка на финиш
     if (targetCell.board.ind === 2 && targetCell.board.player === chip.player) {
@@ -415,33 +401,33 @@ export class Game {
       if (finishBoard.cells.indexOf(targetCell) === lastCellIndex) {
         chip.finish();
         // Проверить, не победил ли игрок
-        this.checkWinner();
+        checkWinner();
       }
     }
 
     return true;
-  }
+  };
 
   /**
    * Проверить, есть ли победитель (игрок, все фишки которого финишировали)
    * Устанавливает поле winner, если победитель найден.
    */
-  checkWinner(): Player | null {
-    if (this.winner) return this.winner; // уже определён
-    for (const player of this.players) {
+  const checkWinner = (): Player | null => {
+    if (winner.value) return winner.value; // уже определён
+    for (const player of playerStore.players) {
       if (player.chips.every((chip) => chip.finished)) {
-        this.winner = player;
+        winner.value = player;
         console.log(`🎉 Игрок ${player.color} победил! Все фишки финишировали.`);
         return player;
       }
     }
     return null;
-  }
+  };
 
   /**
    * Отправить фишку на стартовую ячейку её игрока
    */
-  sendToStart(chip: Chip) {
+  const sendToStart = (chip: Chip) => {
     const player = chip.player;
     const startBoard = player.boards[0];
     if (startBoard && startBoard.cells.length > 0) {
@@ -450,5 +436,61 @@ export class Game {
         chip.go(startCell);
       }
     }
-  }
-}
+  };
+
+  // Шаги для выбранной фишки
+  const availableStepsForSelectedChip = computed(() => {
+    if (!selectedChip.value) return [];
+    return getPossibleStepsForChip(selectedChip.value);
+  });
+
+  // Индексы ячеек для подсветки (целевые ячейки для выбранной фишки)
+  const highlightedCellIndices = computed(() => {
+    const indices: number[] = [];
+    if (!selectedChip.value) return indices;
+    const board = playerStore.current!.boards[1]; // главная доска
+    if (!board) return indices;
+    for (const step of availableStepsForSelectedChip.value) {
+      const targetCell = findTargetCell(selectedChip.value.cell!, step);
+      if (targetCell && targetCell.board === board) {
+        const idx = board.cells.indexOf(targetCell);
+        if (idx !== -1) indices.push(idx);
+      }
+    }
+    return indices;
+  });
+
+  const selectedChip = ref<Chip | null>(null);
+
+  const movableChips = computed(() => getMovableChips());
+
+  const availableChipIds = computed(() => movableChips.value.map((chip) => chip.id));
+
+  // Обработчик клика на фишку
+  const onChipClick = (chip: Chip | null | undefined) => {
+    if (chip && isChipAvailable(chip)) {
+      selectedChip.value = chip;
+    }
+  };
+
+  const isChipAvailable = (chip: Chip | null | undefined): boolean => {
+    if (!chip) return false;
+    return availableChipIds.value.includes(chip.id);
+  };
+
+  return {
+    initGame,
+    canRollDice,
+    rollDice,
+    onChipClick,
+    //availableChipIds,
+    highlightedCellIndices,
+    selectedChip,
+    moveChip,
+    availableStepsForSelectedChip,
+    currentBonusSteps,
+    movableChips,
+    nextPlayer,
+    isChipAvailable,
+  };
+});

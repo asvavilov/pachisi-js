@@ -1,32 +1,22 @@
 <template>
   <div class="board">
-    <CornerBoard
-      v-for="player of players"
-      :key="player.ind"
-      :player="player"
-      :available-chip-ids="availableChipIdsArray"
-      @chip-click="onChipClick"
-    />
+    <CornerBoard v-for="player of playerStore.players" :key="player.ind" :player="player" />
 
     <CellBoard
-      v-for="(cell, cellIndex) of board.cells"
+      v-for="(cell, cellIndex) of boardStore.board.cells"
       :key="cellIndex"
       :cell="cell"
       :cell-index="cellIndex"
       :board-index="2"
-      :available-chip-ids="availableChipIdsArray"
-      :highlighted-cells="highlightedCellsArray"
-      @chip-click="onChipClick"
     />
 
-    <template v-for="finishBoard in finishBoards">
+    <template v-for="finishBoard in boardStore.finishBoards">
       <CellBoard
         v-for="(cell, cellIndex) of finishBoard.cells"
         :key="cellIndex"
         :cell="cell"
         :cell-index="cellIndex"
         :player-index="finishBoard.player?.ind!"
-        @chip-click="onChipClick"
       />
     </template>
 
@@ -35,82 +25,14 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed } from 'vue';
-import { Board } from 'src/lib/board';
-import { usePlayerStore } from 'src/stores/player';
-import { firstElement, lastElement } from 'src/utils/array';
-import type { Chip } from 'src/lib/chip';
 import CellBoard from './CellBoard.vue';
 import CornerBoard from './CornerBoard.vue';
 import CenterBoard from './CenterBoard.vue';
+import { useBoardStore } from 'src/stores/board';
+import { usePlayerStore } from 'src/stores/player';
 
-const { items: players } = usePlayerStore();
-
-const props = defineProps<{
-  availableChipIds?: number[];
-  highlightedCells?: number[]; // индексы ячеек главной доски для подсветки
-}>();
-
-const emit = defineEmits<{
-  chipClick: [chip: Chip];
-}>();
-
-/**
- * карта ячеек безопасности
- */
-const safes = {
-  4: players[0]!,
-  11: true,
-  16: true,
-  21: players[1]!,
-  28: true,
-  33: true,
-  38: players[2]!,
-  45: true,
-  50: true,
-  55: players[3]!,
-  62: true,
-  67: true,
-};
-
-/**
- * карта ячеек-переходов
- */
-const ios = {
-  0: lastElement(players[0]!.boards[0]!.cells)!,
-  12: firstElement(players[1]!.boards[2]!.cells)!,
-  17: lastElement(players[1]!.boards[0]!.cells)!,
-  29: firstElement(players[2]!.boards[2]!.cells)!,
-  34: lastElement(players[2]!.boards[0]!.cells)!,
-  46: firstElement(players[3]!.boards[2]!.cells)!,
-  51: lastElement(players[3]!.boards[0]!.cells)!,
-  63: firstElement(players[0]!.boards[2]!.cells)!,
-};
-
-/**
- * общая глобальная доска
- */
-const board = reactive(new Board(1, undefined, 68, safes, ios));
-
-/**
- * связь игроков с общей доской и связи ячеек-переходов с общей доской
- */
-players.forEach(function (player) {
-  lastElement(player.boards[0]!.cells)!.io = board.cells[player.i_begin];
-  player.boards[1] = board;
-  firstElement(player.boards[2]!.cells)!.io = board.cells[player.i_end];
-});
-
-const finishBoards = computed(() => players.map((p) => p.boards[2]!));
-
-const availableChipIdsArray = computed(() => props.availableChipIds ?? []);
-const highlightedCellsArray = computed(() => props.highlightedCells ?? []);
-
-function onChipClick(chip: Chip) {
-  if (chip && props.availableChipIds?.includes(chip.id)) {
-    emit('chipClick', chip);
-  }
-}
+const boardStore = useBoardStore();
+const playerStore = usePlayerStore();
 </script>
 <style scoped>
 .board {

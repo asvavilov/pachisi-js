@@ -10,15 +10,6 @@ export enum PlayerColor {
   green = 'green',
 }
 
-const PlayerColors = [
-  PlayerColor.yellow,
-  PlayerColor.blue,
-  PlayerColor.red,
-  PlayerColor.green,
-] as const;
-
-export const playerColor = (playerIndex: PlayerIndex) => PlayerColors[playerIndex];
-
 /**
  * игрок
  */

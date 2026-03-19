@@ -1,51 +1,44 @@
 <template>
-  <div class="corner" :class="cornerClass" :style="{ '--color': playerColor(player.ind) }">
+  <div
+    class="corner"
+    :class="cornerClass"
+    :style="{ '--color': playerStore.players[player.ind]!.color }"
+  >
     <div
-      v-for="chip in chips"
+      v-for="chip in places"
       :key="chip?.id"
       class="place"
       :class="{
         chip: !!chip,
-        available: isChipAvailable(chip),
+        available: gameStore.isChipAvailable(chip),
+        selected: gameStore.selectedChip && gameStore.selectedChip === chip,
       }"
       :style="{ '--color': chip?.player.color }"
-      @click="onChipClick(chip)"
+      @click="gameStore.onChipClick(chip)"
     ></div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { playerColor, type Player } from 'src/lib/player';
-import type { Chip } from 'src/lib/chip';
+import { usePlayerStore } from 'src/stores/player';
+import type { Player } from 'src/lib/player';
+import { useGameStore } from 'src/stores/game';
 
 const props = defineProps<{
   player: Player;
-  availableChipIds?: number[];
 }>();
 
-const emit = defineEmits<{
-  chipClick: [chip: Chip];
-}>();
+const gameStore = useGameStore();
+const playerStore = usePlayerStore();
 
 const cornerClass = computed(() => `corner-${props.player.ind}`);
 
-const chips = computed(() => {
+const places = computed(() => {
   if (!props.player) return [];
   // стартовые ячейки находятся в boards[0].cells[0].places
   return props.player.boards[0]?.cells[0]?.places ?? [];
 });
-
-function isChipAvailable(chip: Chip | null | undefined): boolean {
-  if (!chip) return false;
-  return props.availableChipIds?.includes(chip.id) ?? false;
-}
-
-function onChipClick(chip: Chip | null | undefined) {
-  if (chip && isChipAvailable(chip)) {
-    emit('chipClick', chip);
-  }
-}
 </script>
 <style scoped>
 .corner {
@@ -56,8 +49,12 @@ function onChipClick(chip: Chip | null | undefined) {
   height: 20px;
   border: 1px solid #ccc;
   background-color: var(--color);
+  opacity: 0.5;
 }
 .chip.available {
+  opacity: 1;
+}
+.chip.selected {
   border: 1px solid black;
 }
 </style>

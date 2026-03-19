@@ -1,11 +1,11 @@
 <template>
   <div class="center">
     <div
-      v-for="player in players"
+      v-for="player in playerStore.players"
       :key="player.color"
       class="home-area"
       :class="{ [`home-area-${player.ind}`]: true }"
-      :style="{ '--color': playerColor(player.ind) }"
+      :style="{ '--color': playerStore.players[player.ind]!.color }"
     >
       <!-- дома игроков (пустые) -->
     </div>
@@ -13,10 +13,9 @@
 </template>
 
 <script setup lang="ts">
-import { playerColor } from 'src/lib/player';
 import { usePlayerStore } from 'src/stores/player';
 
-const { items: players } = usePlayerStore();
+const playerStore = usePlayerStore();
 </script>
 <style scoped>
 .center {

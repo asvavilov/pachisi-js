@@ -2,222 +2,25 @@
   <q-page class="q-pa-md">
     <div class="row">
       <div class="col-auto">
-        <MainBoard
-          :available-chip-ids="availableChipIds"
-          :highlighted-cells="highlightedCellIndices"
-          @chip-click="onChipClick"
-        />
+        <MainBoard />
       </div>
       <div class="col">
-        <div>
-          <button @click="rollDice" :disabled="!canRollDice">Бросить кости</button>
-          <span v-if="game.diceValues.length" class="q-ml-md">
-            Кости: {{ game.diceValues }} (сумма: {{ game.diceSum }})
-            <span v-if="!game.allDiceUsed"> (использовано: {{ usedDiceText }})</span>
-            <span v-if="currentBonusSteps.length > 0" class="q-ml-md" style="color: green">
-              Бонусы доступны: {{ currentBonusSteps.map((s) => `+${s}`).join(', ') }}
-            </span>
-          </span>
-        </div>
-        <div
-          class="info-panel q-pa-md q-mb-md"
-          style="background-color: #f0f0f0; border-radius: 8px"
-        >
-          <div class="text-h6">Ход игры</div>
-          <div class="row items-center q-gutter-lg">
-            <div>
-              <strong>Текущий игрок:</strong>
-              <span class="q-ml-sm" :style="{ color: currentPlayerColor }">
-                {{ currentPlayerColor }} (игрок {{ currentPlayerIndex + 1 }})
-              </span>
-            </div>
-            <div v-if="game.diceValues.length">
-              <strong>Выпало:</strong>
-              <span class="q-ml-sm dice-values">
-                {{ game.diceValues.join(' и ') }} = сумма {{ game.diceSum }}
-              </span>
-            </div>
-            <div v-else>
-              <strong>Бросьте кости</strong>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="selectedChip" class="q-mt-md selected-chip-panel">
-          <strong>Выбрана фишка</strong> (позиция: {{ selectedChip.cell?.board.ind }})
-          <div v-for="step in availableStepsForSelectedChip" :key="step" class="q-mt-xs">
-            <button @click="moveChip(selectedChip, step)">Двинуть на {{ step }}</button>
-          </div>
-          <button @click="selectedChip = null">Отмена</button>
-        </div>
-        <div v-else class="q-mt-md">
-          <strong>Доступные фишки:</strong> {{ movableChips.length }}
-          <span v-if="movableChips.length === 0">Нет доступных ходов</span>
-        </div>
-
-        <div v-if="game.allDiceUsed && game.diceValues.length" class="q-mt-md">
-          <strong>Все кубики использованы. Ход завершён.</strong>
-          <button @click="finishTurn">Завершить ход</button>
-        </div>
+        <GamePanel />
       </div>
     </div>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { onMounted } from 'vue';
 import MainBoard from 'src/components/board/MainBoard.vue';
-import { useDiceStore } from 'src/stores/dice';
-import { usePlayerStore } from 'src/stores/player';
-import { Game } from 'src/lib/game';
-import type { Chip } from 'src/lib/chip';
+import GamePanel from 'src/components/GamePanel.vue';
+import { useGameStore } from 'src/stores/game';
 
-const diceStore = useDiceStore();
-const { items: players } = usePlayerStore();
-
-const game = ref<Game>(new Game(players));
-const selectedChip = ref<Chip | null>(null);
-
-const currentPlayerIndex = computed(() => game.value.currentPlayerIndex);
-const currentPlayerColor = computed(() => game.value.currentPlayer.color);
-const movableChips = computed(() => game.value.getMovableChips());
-const availableChipIds = computed(() => movableChips.value.map((chip) => chip.id));
-const usedDiceText = computed(() => {
-  const used = game.value.usedDice;
-  const dice = game.value.diceValues;
-  const parts = [];
-  if (used[0]) parts.push(`первый (${dice[0]})`);
-  if (used[1]) parts.push(`второй (${dice[1]})`);
-  return parts.join(', ') || 'нет';
-});
-
-const currentBonusSteps = computed(() => game.value.currentBonusSteps);
-
-// Можно ли бросить кости
-const canRollDice = computed(() => !game.value.hasRolled);
-
-// Шаги для выбранной фишки
-const availableStepsForSelectedChip = computed(() => {
-  if (!selectedChip.value) return [];
-  return game.value.getPossibleStepsForChip(selectedChip.value);
-});
-
-// Индексы ячеек для подсветки (целевые ячейки для выбранной фишки)
-const highlightedCellIndices = computed(() => {
-  const indices: number[] = [];
-  if (!selectedChip.value) return indices;
-  const board = game.value.currentPlayer.boards[1]; // главная доска
-  if (!board) return indices;
-  for (const step of availableStepsForSelectedChip.value) {
-    const targetCell = game.value.findTargetCell(selectedChip.value.cell!, step);
-    if (targetCell && targetCell.board === board) {
-      const idx = board.cells.indexOf(targetCell);
-      if (idx !== -1) indices.push(idx);
-    }
-  }
-  return indices;
-});
-
-// Обработчик клика на фишку
-function onChipClick(chip: Chip) {
-  if (availableChipIds.value.includes(chip.id)) {
-    selectedChip.value = chip;
-  }
-}
-
-// Синхронизация костей с игрой
-function syncDice() {
-  if (diceStore.items.length > 0) {
-    game.value.diceValues = [...diceStore.items];
-    game.value.hasRolled = true;
-    game.value.usedDice = [false, false];
-  }
-}
-
-// Бросить кости
-function rollDice() {
-  diceStore.drop();
-  syncDice();
-  selectedChip.value = null;
-
-  // Проверка на отсутствие доступных ходов
-  const allChipsOnBase = game.value.currentPlayer.chips.every((chip) => chip.cell?.board.ind === 0);
-  const diceHasSix = game.value.diceValues.includes(6);
-  if (allChipsOnBase && diceHasSix) {
-    // Особый случай: все фишки на базе и выпало 6 — дополнительный бросок
-    // Сбрасываем состояние броска, чтобы игрок мог бросить снова
-    game.value.hasRolled = false;
-    game.value.diceValues = [];
-    game.value.usedDice = [false, false];
-    diceStore.reset();
-    console.log('Все фишки на базе, выпало 6 — дополнительный бросок');
-  } else if (game.value.getMovableChips().length === 0) {
-    // Нет доступных ходов — пропускаем ход
-    console.log('Нет доступных ходов, пропускаем ход');
-    finishTurn();
-  }
-}
-
-// Переместить конкретную фишку на заданное количество шагов
-function moveChip(chip: Chip, steps: number) {
-  // Определяем индекс кубика по значению шага
-  let diceIndex = -1;
-  const bonusSteps = game.value.currentBonusSteps;
-  if (bonusSteps.includes(steps)) {
-    // Бонусный шаг
-    diceIndex = -2;
-  } else if (steps === game.value.diceValues[0] && !game.value.usedDice[0]) {
-    diceIndex = 0;
-  } else if (steps === game.value.diceValues[1] && !game.value.usedDice[1]) {
-    diceIndex = 1;
-  } else if (steps === game.value.diceSum && !game.value.usedDice[0] && !game.value.usedDice[1]) {
-    diceIndex = -1;
-  } else {
-    // Шаг не соответствует доступным кубикам
-    console.error('Недопустимый шаг');
-    return;
-  }
-  const success = game.value.moveChip(chip, steps, diceIndex);
-  if (success) {
-    selectedChip.value = null;
-    // После успешного хода проверяем, все ли кубики использованы
-    if (game.value.allDiceUsed) {
-      finishTurn();
-    }
-  }
-}
-
-// Завершить ход и перейти к следующему игроку
-function finishTurn() {
-  game.value.nextTurn();
-  diceStore.reset();
-  selectedChip.value = null;
-}
-
-// Инициализация
 onMounted(() => {
-  syncDice();
+  const game = useGameStore();
+  game.initGame();
 });
 </script>
 
-<style scoped>
-button {
-  margin: 4px;
-  padding: 8px 12px;
-  background-color: #1976d2;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-.selected-chip-panel {
-  background-color: #e8f4fd;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid #b3d9ff;
-}
-</style>
+<style scoped></style>
