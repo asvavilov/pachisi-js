@@ -6,6 +6,62 @@ import type { Chip } from 'src/lib/chip';
 import { Player } from 'src/lib/player';
 import { computed, ref } from 'vue';
 
+/*
+состояния игры:
+- начало игры
+  не все инициализировано и не все готово
+- ожидание выбора кто начинает игру
+  нужно будет поочередно бросать кости (у кого меньше, тот и начинает игру)
+- ожидание броска костей от текущего игрока
+- ожидание хода (если есть доступные ходы)
+  после броска костей или после предыдущего хода
+- ожидание перехода к следующему игроку
+  когда нет доступных ходов
+- конец игры
+  есть победитель или все места распределены
+*/
+
+enum GameStateEnum {
+  START = 'START',
+  SELECT_FIRST = 'SELECT_FIRST',
+  WAIT_ROLL = 'WAIT_ROLL',
+  WAIT_STEP = 'WAIT_STEP',
+  WAIT_PLAYER = 'WAIT_PLAYER',
+  FINISH = 'FINISH',
+}
+
+interface GameStateSettings {
+  canRollDice: boolean;
+  canFinishRoll: boolean;
+}
+
+const GameStateTree: Record<GameStateEnum, GameStateSettings> = {
+  [GameStateEnum.START]: {
+    canRollDice: false,
+    canFinishRoll: false,
+  },
+  [GameStateEnum.SELECT_FIRST]: {
+    canRollDice: true,
+    canFinishRoll: false,
+  },
+  [GameStateEnum.WAIT_ROLL]: {
+    canRollDice: true,
+    canFinishRoll: false,
+  },
+  [GameStateEnum.WAIT_STEP]: {
+    canRollDice: false,
+    canFinishRoll: false,
+  },
+  [GameStateEnum.WAIT_PLAYER]: {
+    canRollDice: false,
+    canFinishRoll: true,
+  },
+  [GameStateEnum.FINISH]: {
+    canRollDice: false,
+    canFinishRoll: false,
+  },
+};
+
 /**
  * игра
  */
@@ -13,34 +69,41 @@ export const useGameStore = defineStore('game', () => {
   const playerStore = usePlayerStore();
   const diceStore = useDiceStore();
 
+  const stateId = ref<GameStateEnum>(GameStateEnum.START);
+  const state = computed(() => GameStateTree[stateId.value]);
+
   const winner = ref<Player | null>(null); // победитель игры, если есть
   const currentBonusSteps = ref<number[]>([]); // бонусные шаги за захват в текущем ходе (10 или 20)
 
   const initGame = () => {
+    //stateId.value = GameStateEnum.SELECT_FIRST;
     playerStore.init();
     diceStore.reset();
+    stateId.value = GameStateEnum.WAIT_ROLL;
   };
 
-  const canRollDice = computed(() => {
+  /*const canRollDice = computed(() => {
     // TODO когда можно бросать кости:
-    // - еще не брошены
-    // - нет доступных ходов или все использованы (и выпали дубли)
+    // - или еще не брошены
+    // - или нет доступных ходов или все использованы (и выпали дубли)
     return (
-      !diceStore.rolled ||
-      ((diceStore.isAllUsed || movableChips.value.length === 0) && diceStore.isEquals)
+      !diceStore.rolled || ((diceStore.isAllUsed || !hasMovableChips.value) && diceStore.isEquals)
     );
-  });
+  });*/
 
   const rollDice = () => {
     prepareRollDice();
-
     diceStore.roll();
 
-    if (!movableChips.value.length) {
+    if (hasMovableChips.value) {
+      stateId.value = GameStateEnum.WAIT_STEP;
+    } else {
       if (playerStore.canAddon) {
         prepareAddon();
+        stateId.value = GameStateEnum.WAIT_ROLL;
       } else {
-        nextPlayer();
+        //nextPlayer();
+        stateId.value = GameStateEnum.WAIT_PLAYER;
       }
     }
   };
@@ -68,6 +131,7 @@ export const useGameStore = defineStore('game', () => {
     playerStore.next();
 
     prepareRollDice();
+    stateId.value = GameStateEnum.WAIT_ROLL;
   };
 
   /**
@@ -394,6 +458,12 @@ export const useGameStore = defineStore('game', () => {
     chip.go(targetCell);
     selectedChip.value = null;
 
+    stateId.value = hasMovableChips.value
+      ? GameStateEnum.WAIT_STEP
+      : diceStore.hasAddon || diceStore.isEquals
+        ? GameStateEnum.WAIT_ROLL
+        : GameStateEnum.WAIT_PLAYER;
+
     // Проверка на финиш
     if (targetCell.board.ind === 2 && targetCell.board.player === chip.player) {
       const finishBoard = targetCell.board;
@@ -418,6 +488,7 @@ export const useGameStore = defineStore('game', () => {
       if (player.chips.every((chip) => chip.finished)) {
         winner.value = player;
         console.log(`🎉 Игрок ${player.color} победил! Все фишки финишировали.`);
+        stateId.value = GameStateEnum.FINISH;
         return player;
       }
     }
@@ -464,6 +535,8 @@ export const useGameStore = defineStore('game', () => {
 
   const movableChips = computed(() => getMovableChips());
 
+  const hasMovableChips = computed(() => movableChips.value.length > 0);
+
   const availableChipIds = computed(() => movableChips.value.map((chip) => chip.id));
 
   // Обработчик клика на фишку
@@ -480,7 +553,9 @@ export const useGameStore = defineStore('game', () => {
 
   return {
     initGame,
-    canRollDice,
+    stateId,
+    state,
+    //canRollDice,
     rollDice,
     onChipClick,
     //availableChipIds,
@@ -490,6 +565,7 @@ export const useGameStore = defineStore('game', () => {
     availableStepsForSelectedChip,
     currentBonusSteps,
     movableChips,
+    hasMovableChips,
     nextPlayer,
     isChipAvailable,
   };

@@ -1,6 +1,7 @@
 <template>
   <div class="info-panel q-pa-md q-mb-md" style="background-color: #f0f0f0; border-radius: 8px">
     <div class="text-h6">Ход игры</div>
+    <div>{{ gameStore.stateId }}</div>
     <div class="row items-center q-gutter-lg">
       <div v-if="playerStore.current">
         <strong>Текущий игрок:</strong>
@@ -12,7 +13,9 @@
   </div>
 
   <div>
-    <button @click="gameStore.rollDice()" :disabled="!gameStore.canRollDice">Бросить кости</button>
+    <button @click="gameStore.rollDice()" :disabled="!gameStore.state.canRollDice">
+      Бросить кости
+    </button>
     <span class="q-ml-md">
       <template v-if="diceStore.rolled">
         {{ diceStore.items.join(' + ') }} = {{ diceStore.sum }}
@@ -21,7 +24,7 @@
           Бонусы доступны: {{ gameStore.currentBonusSteps.map((s) => `+${s}`).join(', ') }}
         </span>
       </template>
-      <template v-else-if="gameStore.canRollDice">Бросьте кости</template>
+      <template v-else-if="gameStore.state.canRollDice">Бросьте кости</template>
     </span>
   </div>
 
@@ -36,13 +39,10 @@
   </div>
   <div v-else class="q-mt-md">
     <strong>Доступные фишки:</strong> {{ gameStore.movableChips.length }}
-    <span v-if="gameStore.movableChips.length === 0">Нет доступных ходов</span>
+    <span v-if="!gameStore.hasMovableChips">Нет доступных ходов</span>
   </div>
 
-  <div
-    v-if="diceStore.rolled && (gameStore.movableChips.length === 0 || diceStore.isAllUsed === true)"
-    class="q-mt-md"
-  >
+  <div v-if="gameStore.state.canFinishRoll" class="q-mt-md">
     <strong>Все кубики использованы. Ход завершён.</strong>
     <button @click="gameStore.nextPlayer">Завершить ход</button>
   </div>
