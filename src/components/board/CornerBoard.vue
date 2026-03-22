@@ -48,6 +48,7 @@ const places = computed(() => {
   width: 20px;
   height: 20px;
   border: 1px solid #ccc;
+  border-radius: 50%;
   background-color: var(--color);
   opacity: 0.5;
 }

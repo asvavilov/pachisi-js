@@ -39,11 +39,10 @@
   </div>
   <div v-else class="q-mt-md">
     <strong>Доступные фишки:</strong> {{ gameStore.movableChips.length }}
-    <span v-if="!gameStore.hasMovableChips">Нет доступных ходов</span>
   </div>
 
   <div v-if="gameStore.state.canFinishRoll" class="q-mt-md">
-    <strong>Все кубики использованы. Ход завершён.</strong>
+    <strong>Нет доступных шагов.</strong>
     <button @click="gameStore.nextPlayer">Завершить ход</button>
   </div>
 </template>
