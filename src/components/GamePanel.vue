@@ -18,7 +18,21 @@
     </button>
     <span class="q-ml-md">
       <template v-if="diceStore.rolled">
-        {{ diceStore.items.join(' + ') }} = {{ diceStore.sum }}
+        <input
+          v-if="diceStore.items[0] !== undefined"
+          type="number"
+          min="1"
+          max="6"
+          v-model="diceStore.items[0]"
+        />
+        <input
+          v-if="diceStore.items[1] !== undefined"
+          type="number"
+          min="1"
+          max="6"
+          v-model="diceStore.items[1]"
+        />
+        <!--{{ diceStore.items.join(' + ') }} = -->{{ diceStore.sum }}
         <span v-if="diceStore.used.length > 0"> (использовано: {{ usedDiceText }})</span>
         <span v-if="gameStore.currentBonusSteps.length > 0" class="q-ml-md" style="color: green">
           Бонусы доступны: {{ gameStore.currentBonusSteps.map((s) => `+${s}`).join(', ') }}

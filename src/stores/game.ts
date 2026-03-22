@@ -332,7 +332,12 @@ export const useGameStore = defineStore('game', () => {
       return null;
     }
 
-    // 7. Проверка блокировки пути: нельзя пройти через заблокированную ячейку
+    // 7. Проверка отключенности ячейки: нельзя остановиться на ячейке, которая занята и безопасна для занимающего игрока
+    if (isCellDisabled(targetCell)) {
+      return null;
+    }
+
+    // 8. Проверка блокировки пути: нельзя пройти через заблокированную ячейку
     const intermediateCells = getIntermediateCells(currentCell, steps);
     for (const cell of intermediateCells) {
       if (isCellBlocked(cell)) {
@@ -401,6 +406,18 @@ export const useGameStore = defineStore('game', () => {
       return safe === forPlayer;
     }
     return false; // не безопасна
+  };
+
+  const isCellDisabled = (cell: Cell): boolean => {
+    // Ячейка считается отключенной, если она занята и является безопасной для игрока, который её занимает
+    const places = cell.places.filter((p) => p !== null);
+    if (places.length === 0) {
+      return false; // ячейка свободна - не отключена
+    }
+    // Все фишки на ячейке принадлежат одному игроку (по правилам игры)
+    const occupyingPlayer = places[0]!.player;
+    // Проверяем, безопасна ли ячейка для этого игрока
+    return isSafeCell(cell, occupyingPlayer);
   };
 
   /**
