@@ -58,6 +58,23 @@ const playerStore = usePlayerStore();
   grid-area: 15 / 1 / 23 / 9;
 }
 
+.cell.board-2-cell {
+  position: relative;
+}
+.cell.board-2-cell.cell-0 {
+  counter-reset: cell;
+}
+.cell.board-2-cell::after {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 10px;
+  line-height: 100%;
+  pointer-events: none;
+  content: counter(cell);
+  counter-increment: cell;
+}
+
 .board-2-cell.cell-0 {
   grid-area: 22 / 13 / 23 / 15;
 }

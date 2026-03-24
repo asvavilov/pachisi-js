@@ -34,15 +34,6 @@ export const useGameStore = defineStore('game', () => {
     stateId.value = GameStateEnum.WAIT_ROLL;
   };
 
-  /*const canRollDice = computed(() => {
-    // TODO когда можно бросать кости:
-    // - или еще не брошены
-    // - или нет доступных ходов или все использованы (и выпали дубли)
-    return (
-      !diceStore.rolled || ((diceStore.isAllUsed || !hasMovableChips.value) && diceStore.isEquals)
-    );
-  });*/
-
   const rollDice = () => {
     prepareRollDice();
     diceStore.roll();
@@ -144,11 +135,6 @@ export const useGameStore = defineStore('game', () => {
 
     const currentCell = chip.cell;
 
-    // Находим индекс текущей ячейки на соответствующей доске
-    // Для упрощения предположим, что фишка находится на главной доске (board index 1)
-    // или на стартовой/конечной доске.
-    // Реализуем простой поиск следующей ячейки через steps шагов.
-    // Это временная реализация, позже нужно заменить на правильную логику.
     const targetCell = findTargetCell(currentCell, steps, chip.player);
     return targetCell !== null;
   };
@@ -345,28 +331,9 @@ export const useGameStore = defineStore('game', () => {
   /**
    * Проверка, является ли ячейка заблокированной (блок)
    * Блок образуют:
-   * - две фишки одного цвета на любой ячейке общей дорожки
-   * - две фишки разного цвета на безопасной ячейке или на выходе из базы
+   * - фишки одного цвета на любой ячейке заняли все места
    */
-  const isCellBlocked = (cell: Cell): boolean => {
-    const places = cell.places.filter((p) => p !== null);
-    if (places.length < 2) {
-      return false; // меньше двух фишек - не блок
-    }
-    // Проверяем, все ли фишки одного цвета
-    const firstColor = places[0]!.player.color;
-    const allSameColor = places.every((p) => p.player.color === firstColor);
-    if (allSameColor) {
-      return true; // блок из одинаковых цветов
-    }
-    // Если фишки разного цвета, проверяем, является ли ячейка безопасной или выходом из базы
-    const isSafe = isSafeCell(cell);
-    if (isSafe) {
-      return true; // блок из разных цветов на безопасной ячейке
-    }
-    // Также выход из базы (safe instanceof Player) считается безопасной ячейкой, уже покрыто isSafeCell
-    return false;
-  };
+  const isCellBlocked = (cell: Cell): boolean => cell.places.every((p) => p !== null);
 
   /**
    * Переместить фишку на steps шагов с использованием соответствующего кубика

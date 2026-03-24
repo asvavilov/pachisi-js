@@ -10,7 +10,7 @@ export class Cell {
   board: Board;
   safe: Player | boolean | undefined;
   io: Cell | undefined;
-  size: number | undefined;
+  size: number;
   places: (Chip | null)[];
   constructor(
     board: Board,
