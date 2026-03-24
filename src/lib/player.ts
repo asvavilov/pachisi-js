@@ -57,7 +57,7 @@ export class Player {
     this.boards = [
       new Board(0, this, 1, undefined, undefined, { 0: 4 }),
       null,
-      new Board(2, this, 7, undefined, undefined, { 7: 4 }),
+      new Board(2, this, 8, undefined, undefined, { 7: 4 }),
     ];
     // расставляем фишки
     this.chips.forEach((ch) => {
