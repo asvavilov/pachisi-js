@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import { useDiceStore } from './dice';
 import type { PlayerIndex } from 'src/lib/player';
 import { Player, PlayerColor } from 'src/lib/player';
 
@@ -8,8 +7,6 @@ import { Player, PlayerColor } from 'src/lib/player';
  * массив игроков и текущий игрок
  */
 export const usePlayerStore = defineStore('player', () => {
-  const diceStore = useDiceStore();
-
   const players = ref<Player[]>([
     new Player(0, false, PlayerColor.yellow),
     new Player(1, true, PlayerColor.blue),
@@ -37,20 +34,11 @@ export const usePlayerStore = defineStore('player', () => {
     current.value ? current.value.chips.every((chip) => chip.cell?.board.ind === 0) : undefined,
   );
 
-  /**
-   * дополнительный ход:
-   * - или когда дубли
-   * - или выпало 6 и все на базе
-   */
-  const canAddon = computed(() => {
-    return diceStore.isEquals || (allChipsOnBase.value && diceStore.hasAddon);
-  });
-
   return {
     players,
     init,
     next,
     current,
-    canAddon,
+    allChipsOnBase,
   };
 });

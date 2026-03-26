@@ -26,6 +26,9 @@ export const useGameStore = defineStore('game', () => {
   const winner = ref<Player | null>(null); // победитель игры, если есть
   const currentBonusSteps = ref<number[]>([]); // бонусные шаги за захват в текущем ходе (10 или 20)
 
+  /**
+   * Инициализация начала игры.
+   */
   const initGame = () => {
     // TODO пока пропускаем этап выбора игрока и выбираем первого автоматически
     //stateId.value = GameStateEnum.SELECT_FIRST;
@@ -34,6 +37,9 @@ export const useGameStore = defineStore('game', () => {
     stateId.value = GameStateEnum.WAIT_ROLL;
   };
 
+  /**
+   * Бросок кубиков.
+   */
   const rollDice = () => {
     prepareRollDice();
     diceStore.roll();
@@ -41,8 +47,8 @@ export const useGameStore = defineStore('game', () => {
     if (hasMovableChips.value) {
       stateId.value = GameStateEnum.WAIT_STEP;
     } else {
-      if (playerStore.canAddon) {
-        prepareAddon();
+      if (canAddonRollDice.value) {
+        prepareAddonRollDice();
         stateId.value = GameStateEnum.WAIT_ROLL;
       } else {
         //nextPlayer();
@@ -51,6 +57,9 @@ export const useGameStore = defineStore('game', () => {
     }
   };
 
+  /**
+   * Сброс всего что нужно перед следующим броском (дополнительным текущего игрока или следующего игрока).
+   */
   const prepareRollDice = () => {
     // Сбрасываем бонусы текущего хода
     currentBonusSteps.value = [];
@@ -60,7 +69,7 @@ export const useGameStore = defineStore('game', () => {
   /**
    * подготовка дополнительного броска
    */
-  const prepareAddon = () => {
+  const prepareAddonRollDice = () => {
     //diceStore.reset();
 
     prepareRollDice();
@@ -76,6 +85,15 @@ export const useGameStore = defineStore('game', () => {
     prepareRollDice();
     stateId.value = GameStateEnum.WAIT_ROLL;
   };
+
+  /**
+   * дополнительный ход:
+   * - или когда дубли
+   * - или выпало 6 и все на базе
+   */
+  const canAddonRollDice = computed(() => {
+    return diceStore.isEquals || (playerStore.allChipsOnBase && diceStore.hasAddon);
+  });
 
   /**
    * Получить доступные варианты шагов (неиспользованные кубики и сумму)
@@ -135,24 +153,23 @@ export const useGameStore = defineStore('game', () => {
 
     const currentCell = chip.cell;
 
-    const targetCell = findTargetCell(currentCell, steps, chip.player);
+    const targetCell = findTargetCell(currentCell, steps);
     return targetCell !== null;
   };
 
   /**
+   * FIXME целевых может быть 2, если возможен поворот на финиш и движение на следующий круг
+   *
    * Найти целевую ячейку после steps шагов от текущей ячейки
    */
-  const findTargetCell = (from: Cell, steps: number, player?: Player): Cell | null => {
-    // Если игрок не передан, движение невозможно (но в вызывающем коде player всегда передаётся)
-    if (!player) return null;
-
+  const findTargetCell = (from: Cell, steps: number): Cell | null => {
     const currentCell = from;
     const remainingSteps = steps;
 
-    // 1. Если фишка на стартовой доске (ind === 0)
+    // Если фишка на стартовой доске (ind === 0)
     if (currentCell.board.ind === 0) {
       // Выход из базы возможен только при steps === 5 и если выходная ячейка свободна
-      if (steps !== 5) {
+      if (!diceStore.isOut(steps)) {
         return null; // нельзя выйти с другими шагами
       }
       if (!currentCell.io) {
@@ -171,81 +188,35 @@ export const useGameStore = defineStore('game', () => {
       return exitCell;
     }
 
-    // 2. Если фишка на финишной доске (ind === 2), двигаемся только по ней
+    // Если фишка на финишной доске (ind === 2), двигаемся только по ней
     if (currentCell.board.ind === 2) {
-      // Финишная доска принадлежит игроку? Проверим
-      if (currentCell.board.player !== player) {
-        // Фишка на чужой финишной доске - невозможно
-        return null;
-      }
       const idx = currentCell.board.cells.indexOf(currentCell);
-      if (idx === -1) return null;
       const newIdx = idx + remainingSteps;
       // Нельзя выйти за пределы финишной дорожки
       if (newIdx >= currentCell.board.cells.length) {
         return null;
       }
       const targetCell = currentCell.board.cells[newIdx]!;
-      // Проверяем, не заблокирована ли целевая ячейка (на финишной доске блоки возможны?)
-      // По правилам блоки на финишной доске не рассматриваются, но для безопасности проверим.
+      // FIXME проверять не только целевую ячейку, но и все предыдущие (см. как ниже для основной доски)
       if (isCellBlocked(targetCell)) {
         return null;
       }
       return targetCell;
     }
 
-    // 3. Проверим, является ли текущая ячейка входом на финишную дорожку для данного игрока
-    // Если да и steps == 1, фишка переходит на финишную дорожку (первую ячейку)
-    if (
-      currentCell.io &&
-      currentCell.io.board.ind === 2 &&
-      currentCell.io.board.player === player
-    ) {
-      if (remainingSteps === 1) {
-        // Переход на финишную дорожку занимает один шаг
-        const targetCell = currentCell.io;
-        if (isCellBlocked(targetCell)) {
-          return null;
-        }
-        return targetCell;
-      }
-      // Если steps > 1, фишка продолжает движение по основной доске (игнорируем переход)
-    }
-
-    // 4. Движение по главной доске
+    // Движение по главной доске
     const mainBoard = currentCell.board;
-    if (mainBoard.ind !== 1) {
-      // Не главная доска - что-то пошло не так
-      return null;
-    }
     const idx = mainBoard.cells.indexOf(currentCell);
-    if (idx === -1) return null;
     const totalCells = mainBoard.cells.length;
     const newIdx = (idx + remainingSteps) % totalCells;
-    let targetCell = mainBoard.cells[newIdx]!;
+    const targetCell = mainBoard.cells[newIdx]!;
 
-    // 5. Проверим, является ли целевая ячейка входом на финишную дорожку для player
-    // (только если мы точно попали на вход, т.е. не прошли мимо)
-    // Поскольку движение циклическое, мы могли пройти вход и продолжить дальше, но если newIdx соответствует ячейке входа,
-    // то это означает, что мы точно попали на вход.
-    if (targetCell.io && targetCell.io.board.ind === 2 && targetCell.io.board.player === player) {
-      // Фишка попадает на вход финишной дорожки. Переходим на финишную дорожку.
-      // При этом остаток шагов равен 0, потому что мы уже использовали все шаги для достижения этой ячейки.
-      // Фишка просто переходит на первую ячейку финишной дорожки (targetCell.io).
-      targetCell = targetCell.io;
-    }
-
-    // 6. Проверка блокировки: нельзя остановиться на заблокированной ячейке
-    if (isCellBlocked(targetCell)) {
-      return null;
-    }
-
-    // 7. Проверка отключенности ячейки: нельзя остановиться на ячейке, которая занята и безопасна для занимающего игрока
+    // Проверка отключенности ячейки: нельзя остановиться на ячейке, которая занята и безопасна для занимающего игрока
     if (isCellDisabled(targetCell)) {
       return null;
     }
 
-    // 8. Проверка блокировки пути: нельзя пройти через заблокированную ячейку
+    // Проверка блокировки пути: нельзя пройти через заблокированную ячейку
     const intermediateCells = getIntermediateCells(currentCell, steps);
     for (const cell of intermediateCells) {
       if (isCellBlocked(cell)) {
@@ -275,23 +246,26 @@ export const useGameStore = defineStore('game', () => {
   };
 
   /**
-   * Получить промежуточные ячейки при движении от startCell на steps шагов по главной доске.
+   * FIXME нужны варианты:
+   * 1) движение по основной доске, включая заход на следующий круг
+   * 2) движение по основной доске, с поворотом на финишную
+   * 3) движение по финишной доске
+   * для 2 и 3: что если превышает длину? здесь не проверяются блокировки и занятости целевой
+   *
+   * Получить промежуточные ячейки при движении от startCell на steps шагов.
    * Возвращает массив ячеек, через которые проходит фишка (исключая startCell, включая targetCell).
-   * Если движение происходит по финишной доске или стартовой, возвращает пустой массив.
    */
   const getIntermediateCells = (startCell: Cell, steps: number): Cell[] => {
-    if (startCell.board.ind !== 1) {
-      // Не главная доска - нет промежуточных ячеек (движение по финишной или стартовой доске)
+    if (startCell.board.ind === 0) {
       return [];
     }
-    const mainBoard = startCell.board;
-    const idx = mainBoard.cells.indexOf(startCell);
-    if (idx === -1) return [];
-    const totalCells = mainBoard.cells.length;
+    const currentBoard = startCell.board;
+    const idx = currentBoard.cells.indexOf(startCell);
+    const totalCells = currentBoard.cells.length;
     const cells: Cell[] = [];
     for (let i = 1; i <= steps; i++) {
       const newIdx = (idx + i) % totalCells;
-      const cell = mainBoard.cells[newIdx]!;
+      const cell = currentBoard.cells[newIdx]!;
       cells.push(cell);
     }
     return cells;
@@ -329,6 +303,7 @@ export const useGameStore = defineStore('game', () => {
   };
 
   /**
+   * TODO еще нужна функция, которая проверяет нет ли на пути заблокированной ячейки
    * Проверка, является ли ячейка заблокированной (блок)
    * Блок образуют:
    * - фишки одного цвета на любой ячейке заняли все места
@@ -336,14 +311,13 @@ export const useGameStore = defineStore('game', () => {
   const isCellBlocked = (cell: Cell): boolean => cell.places.every((p) => p !== null);
 
   /**
+   * FIXME тут не надо проверок на возможность хода, они должны быть до вызова этого метода
+   *
    * Переместить фишку на steps шагов с использованием соответствующего кубика
    * @param chip Фишка
    * @param steps Количество шагов (должно соответствовать одному из доступных шагов)
    */
   const moveChip = (chip: Chip, steps: number): boolean => {
-    if (!canMoveChip(chip, steps)) {
-      return false;
-    }
     // Проверяем, что выбранный шаг соответствует доступному кубику
     const availableSteps = getAvailableSteps();
     if (!availableSteps.includes(steps)) {
@@ -360,32 +334,23 @@ export const useGameStore = defineStore('game', () => {
     } else {
       diceStore.use(steps);
     }
-    const targetCell = findTargetCell(chip.cell!, steps, chip.player);
-    if (!targetCell) {
-      // Откат использования кубика? Пока просто вернём false, но кубик уже использован
-      // Для простоты не будем делать откат, т.к. это маловероятно
-      // Однако если использовался бонус, нужно вернуть его? Пока не будем.
-      return false;
-    }
+    const targetCell = findTargetCell(chip.cell!, steps)!;
 
     // Проверка на захват: если в целевой ячейке есть фишка другого игрока и ячейка не безопасна для текущей фишки
     const otherChips = targetCell.places.filter((p) => p && p.player !== chip.player);
     let captured = false;
     if (otherChips.length > 0) {
-      const isSafe = isSafeCell(targetCell, chip.player);
-      if (!isSafe) {
-        // Отправляем все чужие фишки на старт
-        for (const otherChip of otherChips) {
-          if (otherChip) {
-            console.log(`Захват! Фишка игрока ${otherChip.player.color} отправлена на старт.`);
-            sendToStart(otherChip);
-            captured = true;
-          }
+      // Отправляем все чужие фишки на старт
+      for (const otherChip of otherChips) {
+        if (otherChip) {
+          console.log(`Захват! Фишка игрока ${otherChip.player.color} отправлена на старт.`);
+          sendToStart(otherChip);
+          captured = true;
         }
-        // Начисляем бонус +20 за захват
-        if (captured) {
-          addBonus(20);
-        }
+      }
+      // Начисляем бонус +20 за захват
+      if (captured) {
+        addBonus(20);
       }
     }
 

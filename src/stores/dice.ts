@@ -81,6 +81,8 @@ export const useDiceStore = defineStore('dice', () => {
       items.value.reduce((acc, cur) => acc + cur, 0) === outVariant,
   );
 
+  const isOut = (steps: number) => steps === outVariant;
+
   const isEquals = computed(
     () => items.value.length > 0 && items.value.every((item) => item === items.value[0]),
   );
@@ -93,6 +95,7 @@ export const useDiceStore = defineStore('dice', () => {
     hasStart,
     hasAddon,
     hasOut,
+    isOut,
     isEquals,
     items,
     used,
