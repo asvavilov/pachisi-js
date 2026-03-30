@@ -1,4 +1,4 @@
-import { Board } from './board';
+import { Board, BoardType } from './board';
 import { Chip } from './chip';
 
 export type PlayerIndex = 0 | 1 | 2 | 3;
@@ -25,7 +25,8 @@ export class Player {
   ai: boolean;
   color: string;
   chips: Chip[];
-  boards: (Board | null)[];
+  baseBoard: Board;
+  homeBoard: Board;
   constructor(ind: PlayerIndex, ai: boolean, color: string) {
     /**
      * глобальный номер игрока
@@ -54,14 +55,12 @@ export class Player {
     /**
      * доски игрока
      */
-    this.boards = [
-      new Board(0, this, 1, undefined, undefined, { 0: 4 }),
-      null,
-      new Board(2, this, 8, undefined, undefined, { 7: 4 }),
-    ];
+    this.baseBoard = new Board(BoardType.base, this, 1, undefined, undefined, { 0: 4 });
+    this.homeBoard = new Board(BoardType.home, this, 8, undefined, undefined, { 7: 4 });
+
     // расставляем фишки
     this.chips.forEach((ch) => {
-      ch.go(this.boards[0]!.cells[0]!);
+      ch.go(this.baseBoard.cells[0]!);
     });
   }
 }

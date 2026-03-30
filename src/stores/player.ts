@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import type { PlayerIndex } from 'src/lib/player';
 import { Player, PlayerColor } from 'src/lib/player';
+import { BoardType } from 'src/lib/board';
 
 /**
  * массив игроков и текущий игрок
@@ -31,7 +32,9 @@ export const usePlayerStore = defineStore('player', () => {
   );
 
   const allChipsOnBase = computed(() =>
-    current.value ? current.value.chips.every((chip) => chip.cell?.board.ind === 0) : undefined,
+    current.value
+      ? current.value.chips.every((chip) => chip.cell?.board.type === BoardType.base)
+      : undefined,
   );
 
   return {

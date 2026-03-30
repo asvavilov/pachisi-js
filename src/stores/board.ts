@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { Board } from 'src/lib/board';
+import { Board, BoardType } from 'src/lib/board';
 import { lastElement, firstElement } from 'src/utils/array';
 import { computed } from 'vue';
 import { usePlayerStore } from './player';
@@ -33,31 +33,30 @@ export const useBoardStore = defineStore('board', () => {
    * карта ячеек-переходов
    */
   const ios = {
-    0: lastElement(players[0]!.boards[0]!.cells)!,
-    12: firstElement(players[1]!.boards[2]!.cells)!,
-    17: lastElement(players[1]!.boards[0]!.cells)!,
-    29: firstElement(players[2]!.boards[2]!.cells)!,
-    34: lastElement(players[2]!.boards[0]!.cells)!,
-    46: firstElement(players[3]!.boards[2]!.cells)!,
-    51: lastElement(players[3]!.boards[0]!.cells)!,
-    63: firstElement(players[0]!.boards[2]!.cells)!,
+    0: lastElement(players[0]!.baseBoard.cells)!,
+    12: firstElement(players[1]!.homeBoard.cells)!,
+    17: lastElement(players[1]!.baseBoard.cells)!,
+    29: firstElement(players[2]!.homeBoard.cells)!,
+    34: lastElement(players[2]!.baseBoard.cells)!,
+    46: firstElement(players[3]!.homeBoard.cells)!,
+    51: lastElement(players[3]!.baseBoard.cells)!,
+    63: firstElement(players[0]!.homeBoard.cells)!,
   };
 
   /**
    * общая глобальная доска
    */
-  const board = new Board(1, undefined, 68, safes, ios);
+  const board = new Board(BoardType.main, undefined, 68, safes, ios);
 
   /**
    * связь игроков с общей доской и связи ячеек-переходов с общей доской
    */
   players.forEach(function (player) {
-    lastElement(player.boards[0]!.cells)!.io = board.cells[player.i_begin];
-    player.boards[1] = board;
-    firstElement(player.boards[2]!.cells)!.io = board.cells[player.i_end];
+    lastElement(player.baseBoard.cells)!.io = board.cells[player.i_begin];
+    firstElement(player.homeBoard.cells)!.io = board.cells[player.i_end];
   });
 
-  const finishBoards = computed(() => players.map((p) => p.boards[2]!));
+  const finishBoards = computed(() => players.map((p) => p.homeBoard));
 
   return {
     board,

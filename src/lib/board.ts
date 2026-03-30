@@ -1,16 +1,22 @@
 import { Cell } from './cell';
 import type { Player } from './player';
 
+export enum BoardType {
+  base = 'base',
+  main = 'main',
+  home = 'home',
+}
+
 /**
  * доска
  */
 export class Board {
-  ind: number;
+  type: BoardType;
   player: Player | undefined;
   cells: Cell[];
 
   constructor(
-    ind: number,
+    type: BoardType,
     player: Player | undefined,
     len: number,
     safes: Record<number, Player | boolean> | undefined,
@@ -20,7 +26,7 @@ export class Board {
     /**
      * глобальный индекс доски
      */
-    this.ind = ind;
+    this.type = type;
     /**
      * связь с игроком, если нужно
      */

@@ -37,7 +37,7 @@ const cornerClass = computed(() => `corner-${props.player.ind}`);
 const places = computed(() => {
   if (!props.player) return [];
   // стартовые ячейки находятся в boards[0].cells[0].places
-  return props.player.boards[0]?.cells[0]?.places ?? [];
+  return props.player.baseBoard.cells[0]?.places ?? [];
 });
 </script>
 <style scoped>

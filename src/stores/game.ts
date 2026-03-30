@@ -6,6 +6,8 @@ import type { Chip } from 'src/lib/chip';
 import { Player } from 'src/lib/player';
 import { computed, ref } from 'vue';
 import { GameStateEnum, GameStateTree } from 'src/lib/GameState';
+import { BoardType } from 'src/lib/board';
+import { useBoardStore } from './board';
 
 /**
  * игра
@@ -13,6 +15,7 @@ import { GameStateEnum, GameStateTree } from 'src/lib/GameState';
 export const useGameStore = defineStore('game', () => {
   const playerStore = usePlayerStore();
   const diceStore = useDiceStore();
+  const boardStore = useBoardStore();
 
   /**
    * ид. текущего состояния игры
@@ -167,7 +170,7 @@ export const useGameStore = defineStore('game', () => {
     const remainingSteps = steps;
 
     // Если фишка на стартовой доске (ind === 0)
-    if (currentCell.board.ind === 0) {
+    if (currentCell.board.type === BoardType.base) {
       // Выход из базы возможен только при steps === 5 и если выходная ячейка свободна
       if (!diceStore.isOut(steps)) {
         return null; // нельзя выйти с другими шагами
@@ -189,7 +192,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     // Если фишка на финишной доске (ind === 2), двигаемся только по ней
-    if (currentCell.board.ind === 2) {
+    if (currentCell.board.type === BoardType.home) {
       const idx = currentCell.board.cells.indexOf(currentCell);
       const newIdx = idx + remainingSteps;
       // Нельзя выйти за пределы финишной дорожки
@@ -256,7 +259,7 @@ export const useGameStore = defineStore('game', () => {
    * Возвращает массив ячеек, через которые проходит фишка (исключая startCell, включая targetCell).
    */
   const getIntermediateCells = (startCell: Cell, steps: number): Cell[] => {
-    if (startCell.board.ind === 0) {
+    if (startCell.board.type === BoardType.base) {
       return [];
     }
     const currentBoard = startCell.board;
@@ -366,7 +369,7 @@ export const useGameStore = defineStore('game', () => {
         : GameStateEnum.WAIT_PLAYER;
 
     // Проверка на финиш
-    if (targetCell.board.ind === 2 && targetCell.board.player === chip.player) {
+    if (targetCell.board.type === BoardType.home && targetCell.board.player === chip.player) {
       const finishBoard = targetCell.board;
       const lastCellIndex = finishBoard.cells.length - 1;
       if (finishBoard.cells.indexOf(targetCell) === lastCellIndex) {
@@ -401,7 +404,7 @@ export const useGameStore = defineStore('game', () => {
    */
   const sendToStart = (chip: Chip) => {
     const player = chip.player;
-    const startBoard = player.boards[0];
+    const startBoard = player.baseBoard;
     if (startBoard && startBoard.cells.length > 0) {
       const startCell = startBoard.cells[0];
       if (startCell) {
@@ -420,7 +423,7 @@ export const useGameStore = defineStore('game', () => {
   const highlightedCellIndices = computed(() => {
     const indices: number[] = [];
     if (!selectedChip.value) return indices;
-    const board = playerStore.current!.boards[1]; // главная доска
+    const board = boardStore.board; // главная доска
     for (const step of availableStepsForSelectedChip.value) {
       const targetCell = findTargetCell(selectedChip.value.cell!, step);
       if (targetCell && targetCell.board === board) {
