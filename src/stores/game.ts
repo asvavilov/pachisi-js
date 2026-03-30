@@ -421,7 +421,6 @@ export const useGameStore = defineStore('game', () => {
     const indices: number[] = [];
     if (!selectedChip.value) return indices;
     const board = playerStore.current!.boards[1]; // главная доска
-    if (!board) return indices;
     for (const step of availableStepsForSelectedChip.value) {
       const targetCell = findTargetCell(selectedChip.value.cell!, step);
       if (targetCell && targetCell.board === board) {
