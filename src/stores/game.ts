@@ -26,7 +26,8 @@ export const useGameStore = defineStore('game', () => {
    */
   const state = computed(() => GameStateTree[stateId.value]);
 
-  const winner = ref<Player | null>(null); // победитель игры, если есть
+  const selectedChip = ref<Chip | null>(null);
+
   const currentBonusSteps = ref<number[]>([]); // бонусные шаги за захват в текущем ходе (10 или 20)
 
   /**
@@ -98,6 +99,58 @@ export const useGameStore = defineStore('game', () => {
     return diceStore.isEquals || (playerStore.allChipsOnBase && diceStore.hasAddon);
   });
 
+  const movableChips = computed(() => getMovableChips());
+
+  const hasMovableChips = computed(() => movableChips.value.length > 0);
+
+  const availableChipIds = computed(() => movableChips.value.map((chip) => chip.id));
+
+  // Индексы ячеек для подсветки (целевые ячейки для выбранной фишки)
+  const highlightedCellIndices = computed(() => {
+    const indices: number[] = [];
+    if (!selectedChip.value) return indices;
+    const board = boardStore.board; // главная доска
+    for (const step of availableStepsForSelectedChip.value) {
+      const targetCell = findTargetCell(selectedChip.value.cell, step);
+      if (targetCell && targetCell.board === board) {
+        const idx = board.cells.indexOf(targetCell);
+        if (idx !== -1) indices.push(idx);
+      }
+    }
+    return indices;
+  });
+
+  const isChipAvailable = (chip: Chip | null | undefined): boolean => {
+    if (!chip) return false;
+    return availableChipIds.value.includes(chip.id);
+  };
+
+  /**
+   * Получить список фишек, которые могут быть перемещены на любой из доступных шагов
+   */
+  const getMovableChips = (): Chip[] => {
+    const steps = getAvailableSteps();
+    const movable: Chip[] = [];
+    for (const step of steps) {
+      movable.push(...getMovableChipsForSteps(step));
+    }
+    // Убрать дубликаты (одна фишка может быть доступна для нескольких шагов)
+    return Array.from(new Set(movable));
+  };
+
+  // Шаги для выбранной фишки
+  const availableStepsForSelectedChip = computed(() => {
+    if (!selectedChip.value) return [];
+    return getPossibleStepsForChip(selectedChip.value);
+  });
+
+  /**
+   * Получить возможные шаги для конкретной фишки
+   */
+  const getPossibleStepsForChip = (chip: Chip): number[] => {
+    return [...new Set(getAvailableSteps().filter((step) => canMoveChip(chip, step)))];
+  };
+
   /**
    * Получить доступные варианты шагов (неиспользованные кубики и сумму)
    */
@@ -114,19 +167,6 @@ export const useGameStore = defineStore('game', () => {
       steps.push(bonus);
     }
     return steps;
-  };
-
-  /**
-   * Получить список фишек, которые могут быть перемещены на любой из доступных шагов
-   */
-  const getMovableChips = (): Chip[] => {
-    const steps = getAvailableSteps();
-    const movable: Chip[] = [];
-    for (const step of steps) {
-      movable.push(...getMovableChipsForSteps(step));
-    }
-    // Убрать дубликаты (одна фишка может быть доступна для нескольких шагов)
-    return Array.from(new Set(movable));
   };
 
   /**
@@ -231,24 +271,6 @@ export const useGameStore = defineStore('game', () => {
   };
 
   /**
-   * Добавить бонусные шаги текущему игроку (только если это текущий игрок)
-   */
-  const addBonus = (steps: number) => {
-    // Добавляем отдельный бонусный шаг (10 или 20) в массив
-    currentBonusSteps.value.push(steps);
-    console.log(
-      `Игрок получил бонус +${steps} шагов. Теперь бонусы: [${currentBonusSteps.value.join(', ')}]`,
-    );
-  };
-
-  /**
-   * Получить возможные шаги для конкретной фишки
-   */
-  const getPossibleStepsForChip = (chip: Chip): number[] => {
-    return [...new Set(getAvailableSteps().filter((step) => canMoveChip(chip, step)))];
-  };
-
-  /**
    * FIXME нужны варианты:
    * 1) движение по основной доске, включая заход на следующий круг
    * 2) движение по основной доске, с поворотом на финишную
@@ -337,7 +359,7 @@ export const useGameStore = defineStore('game', () => {
     } else {
       diceStore.use(steps);
     }
-    const targetCell = findTargetCell(chip.cell!, steps)!;
+    const targetCell = findTargetCell(chip.cell, steps)!;
 
     // Проверка на захват: если в целевой ячейке есть фишка другого игрока и ячейка не безопасна для текущей фишки
     const otherChips = targetCell.places.filter((p) => p && p.player !== chip.player);
@@ -374,8 +396,7 @@ export const useGameStore = defineStore('game', () => {
       const lastCellIndex = finishBoard.cells.length - 1;
       if (finishBoard.cells.indexOf(targetCell) === lastCellIndex) {
         chip.finish();
-        // Проверить, не победил ли игрок
-        checkWinner();
+        checkWinner(chip.player);
       }
     }
 
@@ -383,20 +404,23 @@ export const useGameStore = defineStore('game', () => {
   };
 
   /**
-   * Проверить, есть ли победитель (игрок, все фишки которого финишировали)
-   * Устанавливает поле winner, если победитель найден.
+   * Добавить бонусные шаги текущему игроку (только если это текущий игрок)
    */
-  const checkWinner = (): Player | null => {
-    if (winner.value) return winner.value; // уже определён
-    for (const player of playerStore.players) {
-      if (player.chips.every((chip) => chip.finished)) {
-        winner.value = player;
-        console.log(`🎉 Игрок ${player.color} победил! Все фишки финишировали.`);
-        stateId.value = GameStateEnum.FINISH;
-        return player;
-      }
+  const addBonus = (steps: number) => {
+    // Добавляем отдельный бонусный шаг (10 или 20) в массив
+    currentBonusSteps.value.push(steps);
+    console.log(
+      `Игрок получил бонус +${steps} шагов. Теперь бонусы: [${currentBonusSteps.value.join(', ')}]`,
+    );
+  };
+
+  const checkWinner = (player: Player) => {
+    // Проверить, не победил ли игрок
+    const isWinner = playerStore.checkWinner(player);
+    if (isWinner === player) {
+      // TODO пока только один победитель
+      stateId.value = GameStateEnum.FINISH;
     }
-    return null;
   };
 
   /**
@@ -405,53 +429,15 @@ export const useGameStore = defineStore('game', () => {
   const sendToStart = (chip: Chip) => {
     const player = chip.player;
     const startBoard = player.baseBoard;
-    if (startBoard && startBoard.cells.length > 0) {
-      const startCell = startBoard.cells[0];
-      if (startCell) {
-        chip.go(startCell);
-      }
-    }
+    const startCell = startBoard.cells[0]!;
+    chip.go(startCell);
   };
-
-  // Шаги для выбранной фишки
-  const availableStepsForSelectedChip = computed(() => {
-    if (!selectedChip.value) return [];
-    return getPossibleStepsForChip(selectedChip.value);
-  });
-
-  // Индексы ячеек для подсветки (целевые ячейки для выбранной фишки)
-  const highlightedCellIndices = computed(() => {
-    const indices: number[] = [];
-    if (!selectedChip.value) return indices;
-    const board = boardStore.board; // главная доска
-    for (const step of availableStepsForSelectedChip.value) {
-      const targetCell = findTargetCell(selectedChip.value.cell!, step);
-      if (targetCell && targetCell.board === board) {
-        const idx = board.cells.indexOf(targetCell);
-        if (idx !== -1) indices.push(idx);
-      }
-    }
-    return indices;
-  });
-
-  const selectedChip = ref<Chip | null>(null);
-
-  const movableChips = computed(() => getMovableChips());
-
-  const hasMovableChips = computed(() => movableChips.value.length > 0);
-
-  const availableChipIds = computed(() => movableChips.value.map((chip) => chip.id));
 
   // Обработчик клика на фишку
   const onChipClick = (chip: Chip | null | undefined) => {
     if (chip && isChipAvailable(chip)) {
       selectedChip.value = chip;
     }
-  };
-
-  const isChipAvailable = (chip: Chip | null | undefined): boolean => {
-    if (!chip) return false;
-    return availableChipIds.value.includes(chip.id);
   };
 
   return {

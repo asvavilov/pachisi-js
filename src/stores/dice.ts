@@ -8,7 +8,7 @@ export const useDiceStore = defineStore('dice', () => {
   const count: number = 2;
   const startItem: number = 6;
   const addonItem: number = 6;
-  const outVariant: number = 5;
+  const outItem: number = 5;
 
   const items = ref<number[]>([]);
   const used = ref<number[]>([]);
@@ -17,7 +17,7 @@ export const useDiceStore = defineStore('dice', () => {
    * Возвращает массив, в котором из массива source удалены вхождения элементов массива toRemove
    * с учётом количества (каждое вхождение toRemove удаляет одно совпадение из source).
    */
-  function diffByCount(source: number[], toRemove: number[]): number[] {
+  const diffByCount = (source: number[], toRemove: number[]) => {
     const sourceCounts = new Map<number, number>();
     for (const val of source) {
       sourceCounts.set(val, (sourceCounts.get(val) || 0) + 1);
@@ -39,7 +39,7 @@ export const useDiceStore = defineStore('dice', () => {
       }
     }
     return result;
-  }
+  };
 
   const sum = computed(() => items.value.reduce((acc, cur) => acc + cur, 0));
   const unusedSum = computed(() => unused.value.reduce((acc, cur) => acc + cur, 0));
@@ -49,18 +49,16 @@ export const useDiceStore = defineStore('dice', () => {
     items.value = Array.from({ length: count }, () => Math.round(Math.random() * 5 + 1));
   };
 
-  const use = (value: number) => {
+  const use = (item: number) => {
     // Проверяем, есть ли значение среди неиспользованных
-    if (unused.value.includes(value)) {
-      used.value.push(value);
-    } else if (value === unusedSum.value) {
+    if (unused.value.includes(item)) {
+      used.value.push(item);
+    } else if (item === unusedSum.value) {
       used.value.push(...unused.value);
     }
   };
 
-  const unused = computed(() => {
-    return diffByCount(items.value, used.value);
-  });
+  const unused = computed(() => diffByCount(items.value, used.value));
 
   const isAllUsed = computed(() => {
     return used.value.length > 0 ? used.value.length === items.value.length : undefined;
@@ -76,12 +74,10 @@ export const useDiceStore = defineStore('dice', () => {
   const hasAddon = computed(() => items.value.some((item) => item === addonItem));
 
   const hasOut = computed(
-    () =>
-      items.value.some((item) => item === outVariant) ||
-      items.value.reduce((acc, cur) => acc + cur, 0) === outVariant,
+    () => items.value.some((item) => item === outItem) || sum.value === outItem,
   );
 
-  const isOut = (steps: number) => steps === outVariant;
+  const isOut = (steps: number) => steps === outItem;
 
   const isEquals = computed(
     () => items.value.length > 0 && items.value.every((item) => item === items.value[0]),

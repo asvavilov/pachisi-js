@@ -49,18 +49,19 @@ export class Player {
      */
     this.color = color;
     /**
-     * фишки игрока
-     */
-    this.chips = [new Chip(this), new Chip(this), new Chip(this), new Chip(this)];
-    /**
      * доски игрока
      */
     this.baseBoard = new Board(BoardType.base, this, 1, undefined, undefined, { 0: 4 });
     this.homeBoard = new Board(BoardType.home, this, 8, undefined, undefined, { 7: 4 });
 
-    // расставляем фишки
-    this.chips.forEach((ch) => {
-      ch.go(this.baseBoard.cells[0]!);
-    });
+    /**
+     * фишки игрока
+     */
+    this.chips = [
+      new Chip(this, this.baseBoard.cells[0]!, 0),
+      new Chip(this, this.baseBoard.cells[0]!, 1),
+      new Chip(this, this.baseBoard.cells[0]!, 2),
+      new Chip(this, this.baseBoard.cells[0]!, 3),
+    ];
   }
 }

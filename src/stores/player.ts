@@ -16,9 +16,11 @@ export const usePlayerStore = defineStore('player', () => {
   ]);
 
   const currentIndex = ref<PlayerIndex>();
+  const winners = ref<Player[]>([]); // победитель игры, если есть
 
   const init = () => {
     currentIndex.value = 0;
+    winners.value = [];
   };
 
   const next = () => {
@@ -37,11 +39,34 @@ export const usePlayerStore = defineStore('player', () => {
       : undefined,
   );
 
+  /**
+   * Проверить игрока на победителя (игрок, все фишки которого финишировали).
+   * Если только что был добавлен победитель, то вернёт player,
+   * иначе возвращает true (если найден в списке) или false (если не победитель).
+   */
+  const checkWinner = (player: Player) => {
+    if (winners.value.includes(player)) {
+      return true;
+    }
+
+    if (player.chips.every((chip) => chip.finished)) {
+      winners.value.push(player);
+      console.log(
+        `🎉 Игрок ${player.color} занял ${winners.value.length} место! Все фишки финишировали.`,
+      );
+      return player;
+    }
+
+    return false;
+  };
+
   return {
     players,
+    winners,
     init,
     next,
     current,
     allChipsOnBase,
+    checkWinner,
   };
 });

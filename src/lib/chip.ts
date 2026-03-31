@@ -9,12 +9,12 @@ let chipIdCounter = 0;
  */
 export class Chip {
   player: Player;
-  cell: Cell | null;
+  cell: Cell;
   go: (to_cell: Cell) => void;
   readonly id: number;
   finished: boolean;
 
-  constructor(player: Player) {
+  constructor(player: Player, cell: Cell, placeIndex: number) {
     /**
      * связь с игроком
      */
@@ -22,7 +22,8 @@ export class Chip {
     /**
      * связь с ячейкой
      */
-    this.cell = null;
+    this.cell = cell;
+    this.cell.places[placeIndex] = this;
     /**
      * уникальный идентификатор для отладки
      */
@@ -37,22 +38,16 @@ export class Chip {
      * FIXME проверки на возможность перехода должны осуществляться ранее
      */
     this.go = (to_cell) => {
-      if (this.finished) {
-        console.warn(`[фишка ${this.id}] уже финишировала, не может двигаться`);
-        return;
-      }
-      if (this.cell) {
-        const idx = this.cell.places.findIndex((p) => toRaw(p) === this);
-        if (idx >= 0) {
-          this.cell.places[idx] = null;
-        } else {
-          // Резервный поиск по id (на случай, если toRaw не сработал)
-          for (let i = 0; i < this.cell.places.length; i++) {
-            const place = this.cell.places[i];
-            if (place && (toRaw(place) === this || place.id === this.id)) {
-              this.cell.places[i] = null;
-              break;
-            }
+      const idx = this.cell.places.findIndex((p) => toRaw(p) === this);
+      if (idx >= 0) {
+        this.cell.places[idx] = null;
+      } else {
+        // Резервный поиск по id (на случай, если toRaw не сработал)
+        for (let i = 0; i < this.cell.places.length; i++) {
+          const place = this.cell.places[i];
+          if (place && (toRaw(place) === this || place.id === this.id)) {
+            this.cell.places[i] = null;
+            break;
           }
         }
       }
