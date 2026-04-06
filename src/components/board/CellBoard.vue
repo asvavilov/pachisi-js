@@ -86,4 +86,8 @@ function isCellHighlighted(index: number): boolean {
 .chip.selected {
   border: 1px solid black;
 }
+
+.board-2-cell.highlighted {
+  border-color: #000;
+}
 </style>
