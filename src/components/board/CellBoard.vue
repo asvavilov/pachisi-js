@@ -3,7 +3,7 @@
     class="cell"
     :class="{
       [`player-${playerIndex}-cell`]: playerIndex !== undefined,
-      [`board-${boardIndex}-cell`]: boardIndex !== undefined,
+      [`board-${boardType}-cell`]: boardType !== undefined,
       [`cell-${cellIndex}`]: true,
       safe: !!cell.safe,
       highlighted: isCellHighlighted(cellIndex),
@@ -18,43 +18,28 @@
     }"
   >
     <template v-for="placeNum in cell.size" :key="placeNum">
-      <div
-        v-if="!!cell.places[placeNum - 1]"
-        class="place"
-        :class="{
-          chip: !!cell.places[placeNum - 1],
-          available: gameStore.isChipAvailable(cell.places[placeNum - 1]),
-          selected: gameStore.selectedChip && gameStore.selectedChip === cell.places[placeNum - 1],
-          finished: isChipFinished(cell.places[placeNum - 1]),
-        }"
-        :style="{ '--color': cell.places[placeNum - 1]?.player.color }"
-        :data-chip-id="cell.places[placeNum - 1]?.id"
-        @click="gameStore.onChipClick(cell.places[placeNum - 1])"
-      ></div>
+      <ChipBoard v-if="cell.places[placeNum - 1]" :chip="cell.places[placeNum - 1]!" />
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import type { BoardType } from 'src/lib/board';
 import type { Cell } from 'src/lib/cell';
-import type { Chip } from 'src/lib/chip';
 import { Player, type PlayerIndex } from 'src/lib/player';
 import { useGameStore } from 'src/stores/game';
 import { usePlayerStore } from 'src/stores/player';
+import ChipBoard from './ChipBoard.vue';
 
 defineProps<{
   cell: Cell;
   cellIndex: number;
-  boardIndex?: number;
+  boardType?: BoardType;
   playerIndex?: PlayerIndex;
 }>();
 
 const gameStore = useGameStore();
 const playerStore = usePlayerStore();
-
-function isChipFinished(chip: Chip | null | undefined): boolean {
-  return chip?.finished ?? false;
-}
 
 function isCellHighlighted(index: number): boolean {
   return gameStore.highlightedCellIndices.includes(index);
@@ -73,21 +58,8 @@ function isCellHighlighted(index: number): boolean {
   background-color: #ccc;
   border-color: var(--color);
 }
-.chip {
-  background-color: var(--color);
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  opacity: 0.5;
-}
-.chip.available {
-  opacity: 1;
-}
-.chip.selected {
-  border: 1px solid black;
-}
 
-.board-2-cell.highlighted {
+.board-main-cell.highlighted {
   border-color: #000;
 }
 </style>

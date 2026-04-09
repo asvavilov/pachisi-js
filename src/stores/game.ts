@@ -110,7 +110,7 @@ export const useGameStore = defineStore('game', () => {
     const indices: number[] = [];
     if (!selectedChip.value) return indices;
     const board = boardStore.board; // главная доска
-    for (const step of availableStepsForSelectedChip.value) {
+    for (const step of getPossibleStepsForChip(selectedChip.value)) {
       const targetCell = findTargetCell(selectedChip.value.cell, step);
       if (targetCell && targetCell.board === board) {
         const idx = board.cells.indexOf(targetCell);
@@ -137,12 +137,6 @@ export const useGameStore = defineStore('game', () => {
     // Убрать дубликаты (одна фишка может быть доступна для нескольких шагов)
     return Array.from(new Set(movable));
   };
-
-  // Шаги для выбранной фишки
-  const availableStepsForSelectedChip = computed(() => {
-    if (!selectedChip.value) return [];
-    return getPossibleStepsForChip(selectedChip.value);
-  });
 
   /**
    * Получить возможные шаги для конкретной фишки
@@ -209,7 +203,7 @@ export const useGameStore = defineStore('game', () => {
     const currentCell = from;
     const remainingSteps = steps;
 
-    // Если фишка на стартовой доске (ind === 0)
+    // Если фишка на стартовой доске
     if (currentCell.board.type === BoardType.base) {
       // Выход из базы возможен только при steps === 5 и если выходная ячейка свободна
       if (!diceStore.isOut(steps)) {
@@ -231,7 +225,7 @@ export const useGameStore = defineStore('game', () => {
       return exitCell;
     }
 
-    // Если фишка на финишной доске (ind === 2), двигаемся только по ней
+    // Если фишка на финишной доске, двигаемся только по ней
     if (currentCell.board.type === BoardType.home) {
       const idx = currentCell.board.cells.indexOf(currentCell);
       const newIdx = idx + remainingSteps;
@@ -452,7 +446,7 @@ export const useGameStore = defineStore('game', () => {
     highlightedCellIndices,
     selectedChip,
     moveChip,
-    availableStepsForSelectedChip,
+    getPossibleStepsForChip,
     currentBonusSteps,
     movableChips,
     hasMovableChips,

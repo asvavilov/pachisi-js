@@ -44,7 +44,11 @@
 
   <div v-if="gameStore.selectedChip" class="q-mt-md selected-chip-panel">
     <strong>Выбрана фишка</strong> (доска: {{ gameStore.selectedChip.cell?.board.type }})
-    <div v-for="step in gameStore.availableStepsForSelectedChip" :key="step" class="q-mt-xs">
+    <div
+      v-for="step in gameStore.getPossibleStepsForChip(gameStore.selectedChip)"
+      :key="step"
+      class="q-mt-xs"
+    >
       <button @click="gameStore.moveChip(gameStore.selectedChip, step)">
         Двинуть на {{ step }}
       </button>
