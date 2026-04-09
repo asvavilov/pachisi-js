@@ -39,7 +39,7 @@ export class Player {
     /**
      * номер конечной для текущего игрока ячейки на общей доске
      */
-    this.i_end = this.q * ind + 63 + this.startOffset;
+    this.i_end = (this.q * ind + 63 + this.startOffset) % 68;
     /**
      * компьютер или человек (Artifical Intelligent)
      */

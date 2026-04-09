@@ -7,7 +7,6 @@
       :key="cellIndex"
       :cell="cell"
       :cell-index="cellIndex"
-      :boardType="BoardType.main"
     />
 
     <template v-for="finishBoard in boardStore.finishBoards">
@@ -30,7 +29,6 @@ import CornerBoard from './CornerBoard.vue';
 import CenterBoard from './CenterBoard.vue';
 import { useBoardStore } from 'src/stores/board';
 import { usePlayerStore } from 'src/stores/player';
-import { BoardType } from 'src/lib/board';
 
 const boardStore = useBoardStore();
 const playerStore = usePlayerStore();

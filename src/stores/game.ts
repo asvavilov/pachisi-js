@@ -6,6 +6,7 @@ import type { Chip } from 'src/lib/chip';
 import { Player } from 'src/lib/player';
 import { computed, ref } from 'vue';
 import { GameStateEnum, GameStateTree } from 'src/lib/GameState';
+import type { Board } from 'src/lib/board';
 import { BoardType } from 'src/lib/board';
 import { useBoardStore } from './board';
 
@@ -111,10 +112,19 @@ export const useGameStore = defineStore('game', () => {
     if (!selectedChip.value) return indices;
     const board = boardStore.board; // главная доска
     for (const step of getPossibleStepsForChip(selectedChip.value)) {
-      const targetCell = findTargetCell(selectedChip.value.cell, step);
-      if (targetCell && targetCell.board === board) {
-        const idx = board.cells.indexOf(targetCell);
-        if (idx !== -1) indices.push(idx);
+      const targetCells = findTargetCellVariants(selectedChip.value.cell, step);
+      for (const targetCell of targetCells) {
+        if (targetCell.board === board) {
+          const idx = board.cells.indexOf(targetCell);
+          if (idx !== -1) indices.push(idx);
+        } else if (targetCell.board.type === BoardType.home) {
+          // Подсвечиваем ячейки на финишной доске
+          const idx = targetCell.board.cells.indexOf(targetCell);
+          if (idx !== -1) {
+            // Добавляем смещение для уникальности (используем отрицательные индексы или большое смещение)
+            indices.push(1000 + idx);
+          }
+        }
       }
     }
     return indices;
@@ -188,103 +198,162 @@ export const useGameStore = defineStore('game', () => {
     // Если фишка ещё не на доске (в стартовой ячейке)
     if (!chip.cell) return false;
 
-    const currentCell = chip.cell;
-
-    const targetCell = findTargetCell(currentCell, steps);
-    return targetCell !== null;
+    const targetCells = findTargetCellVariants(chip.cell, steps);
+    return targetCells.length > 0;
   };
 
   /**
-   * FIXME целевых может быть 2, если возможен поворот на финиш и движение на следующий круг
-   *
-   * Найти целевую ячейку после steps шагов от текущей ячейки
+   * Найти все возможные целевые ячейки после steps шагов от текущей ячейки.
+   * Возвращает массив вариантов:
+   * - [ячейка основной доски] - если движение только по основной доске
+   * - [ячейка финишной доски] - если возможен поворот на финиш
    */
-  const findTargetCell = (from: Cell, steps: number): Cell | null => {
+  const findTargetCellVariants = (from: Cell, steps: number): Cell[] => {
+    const variants: Cell[] = [];
     const currentCell = from;
-    const remainingSteps = steps;
 
     // Если фишка на стартовой доске
     if (currentCell.board.type === BoardType.base) {
       // Выход из базы возможен только при steps === 5 и если выходная ячейка свободна
       if (!diceStore.isOut(steps)) {
-        return null; // нельзя выйти с другими шагами
+        return variants; // нельзя выйти с другими шагами
       }
       if (!currentCell.io) {
-        return null; // нет перехода
+        return variants; // нет перехода
       }
       // Проверяем, свободна ли выходная ячейка (не занята другой своей фишкой)
       const exitCell = currentCell.io;
       const isExitFree = exitCell.places.every((p) => p === null);
       if (!isExitFree) {
-        return null; // ячейка занята
+        return variants; // ячейка занята
       }
       // Также проверяем, не заблокирована ли ячейка (блок из двух фишек одного цвета)
       if (isCellBlocked(exitCell)) {
-        return null;
+        return variants;
       }
-      return exitCell;
+      variants.push(exitCell);
+      return variants;
     }
 
     // Если фишка на финишной доске, двигаемся только по ней
     if (currentCell.board.type === BoardType.home) {
       const idx = currentCell.board.cells.indexOf(currentCell);
-      const newIdx = idx + remainingSteps;
+      const newIdx = idx + steps;
       // Нельзя выйти за пределы финишной дорожки
       if (newIdx >= currentCell.board.cells.length) {
-        return null;
+        return variants;
       }
       const targetCell = currentCell.board.cells[newIdx]!;
-      // FIXME проверять не только целевую ячейку, но и все предыдущие (см. как ниже для основной доски)
       if (isCellBlocked(targetCell)) {
-        return null;
+        return variants;
       }
-      return targetCell;
+      variants.push(targetCell);
+      return variants;
     }
 
-    // Движение по главной доске
+    // Движение по главной доске - вариант 1: движение дальше по основной доске
     const mainBoard = currentCell.board;
     const idx = mainBoard.cells.indexOf(currentCell);
     const totalCells = mainBoard.cells.length;
-    const newIdx = (idx + remainingSteps) % totalCells;
-    const targetCell = mainBoard.cells[newIdx]!;
+    const newIdx = (idx + steps) % totalCells;
+    const targetCellMain = mainBoard.cells[newIdx]!;
 
     // Проверка отключенности ячейки: нельзя остановиться на ячейке, которая занята и безопасна для занимающего игрока
-    if (isCellDisabled(targetCell)) {
-      return null;
-    }
-
-    // Проверка блокировки пути: нельзя пройти через заблокированную ячейку
-    const intermediateCells = getIntermediateCells(currentCell, steps);
-    for (const cell of intermediateCells) {
-      if (isCellBlocked(cell)) {
-        return null;
+    if (!isCellDisabled(targetCellMain)) {
+      // Проверка блокировки пути: нельзя пройти через заблокированную ячейку
+      const intermediateCellsMain = getIntermediateCellsOnBoard(currentCell, steps, mainBoard);
+      let pathBlocked = false;
+      for (const cell of intermediateCellsMain) {
+        if (isCellBlocked(cell)) {
+          pathBlocked = true;
+          break;
+        }
+      }
+      if (!pathBlocked) {
+        variants.push(targetCellMain);
       }
     }
 
-    return targetCell;
+    // Вариант 2: проверка возможности поворота на финишную доску
+    // Определяем игрока по текущей ячейке (фишка принадлежит какому-то игроку)
+    // Но у нас нет прямой ссылки, поэтому используем playerStore.current
+    const player = playerStore.current!;
+    const homeBoard = player.homeBoard;
+
+    // Находим индекс ячейки входа на финишную доску
+    // Это ячейка основной доски, связанная с первой ячейкой финишной доски
+    const entranceCell = homeBoard.cells[0]!.io;
+    if (!entranceCell || entranceCell.board.type !== BoardType.main) {
+      return variants; // нет входа на финиш
+    }
+    const entranceIndex = mainBoard.cells.indexOf(entranceCell);
+
+    // Проверяем, проходит ли путь через точку входа на финиш
+    const pathToEntrance = getIntermediateCellsOnBoard(currentCell, steps, mainBoard);
+    const passesThroughEntrance = pathToEntrance.some((cell) => cell === entranceCell);
+
+    // Также проверяем, не является ли сама целевая ячейка точкой входа
+    const targetIdxOnMain = (idx + steps) % totalCells;
+    const targetIsEntrance = targetIdxOnMain === entranceIndex;
+
+    // Проверяем вариант поворота на финишную доску
+    // Если фишка уже стоит на точке входа
+    if (currentCell === entranceCell) {
+      // Можно перейти на homeBoard[steps - 1] (переход = 1 шаг, остальное по финишной доске)
+      if (steps >= 1 && steps <= homeBoard.cells.length) {
+        const targetCellHome = homeBoard.cells[steps - 1]!;
+        if (!isCellBlocked(targetCellHome)) {
+          variants.push(targetCellHome);
+        }
+      }
+    }
+
+    if (passesThroughEntrance || targetIsEntrance) {
+      // Вычисляем, сколько шагов до точки входа
+      const stepsToEntrance = (entranceIndex - idx + totalCells) % totalCells;
+
+      // Если точка входа совпадает с текущей позицией, обработано выше
+      if (stepsToEntrance === 0) {
+        return variants;
+      }
+
+      // Для перехода на финишную доску нужен дополнительный шаг:
+      // homeBoard[0] — это ячейка ПОСЛЕ точки входа (переход через io = 1 шаг)
+      const remainingStepsOnHome = steps - stepsToEntrance - 1;
+
+      if (remainingStepsOnHome >= 0 && remainingStepsOnHome < homeBoard.cells.length) {
+        const targetCellHome = homeBoard.cells[remainingStepsOnHome]!;
+        if (!isCellBlocked(targetCellHome)) {
+          // Проверяем путь до точки входа на основной доске
+          let pathToEntranceBlocked = false;
+          for (let i = 1; i <= stepsToEntrance; i++) {
+            const cellIdx = (idx + i) % totalCells;
+            const cell = mainBoard.cells[cellIdx]!;
+            if (isCellBlocked(cell)) {
+              pathToEntranceBlocked = true;
+              break;
+            }
+          }
+          if (!pathToEntranceBlocked) {
+            variants.push(targetCellHome);
+          }
+        }
+      }
+    }
+
+    return variants;
   };
 
   /**
-   * FIXME нужны варианты:
-   * 1) движение по основной доске, включая заход на следующий круг
-   * 2) движение по основной доске, с поворотом на финишную
-   * 3) движение по финишной доске
-   * для 2 и 3: что если превышает длину? здесь не проверяются блокировки и занятости целевой
-   *
-   * Получить промежуточные ячейки при движении от startCell на steps шагов.
-   * Возвращает массив ячеек, через которые проходит фишка (исключая startCell, включая targetCell).
+   * Получить промежуточные ячейки при движении на steps шагов в рамках одной доски.
    */
-  const getIntermediateCells = (startCell: Cell, steps: number): Cell[] => {
-    if (startCell.board.type === BoardType.base) {
-      return [];
-    }
-    const currentBoard = startCell.board;
-    const idx = currentBoard.cells.indexOf(startCell);
-    const totalCells = currentBoard.cells.length;
+  const getIntermediateCellsOnBoard = (startCell: Cell, steps: number, board: Board): Cell[] => {
+    const idx = board.cells.indexOf(startCell);
+    const totalCells = board.cells.length;
     const cells: Cell[] = [];
     for (let i = 1; i <= steps; i++) {
       const newIdx = (idx + i) % totalCells;
-      const cell = currentBoard.cells[newIdx]!;
+      const cell = board.cells[newIdx]!;
       cells.push(cell);
     }
     return cells;
@@ -336,8 +405,9 @@ export const useGameStore = defineStore('game', () => {
    * Переместить фишку на steps шагов с использованием соответствующего кубика
    * @param chip Фишка
    * @param steps Количество шагов (должно соответствовать одному из доступных шагов)
+   * @param targetCell Целевая ячейка (если не указана, используется первый вариант из findTargetCellVariants)
    */
-  const moveChip = (chip: Chip, steps: number): boolean => {
+  const moveChip = (chip: Chip, steps: number, targetCell: Cell): boolean => {
     // Проверяем, что выбранный шаг соответствует доступному кубику
     const availableSteps = getAvailableSteps();
     if (!availableSteps.includes(steps)) {
@@ -348,22 +418,20 @@ export const useGameStore = defineStore('game', () => {
     if (bonusIndex !== -1) {
       // Используем бонусный шаг
       currentBonusSteps.value.splice(bonusIndex, 1);
-      console.log(
-        `Игрок ${usePlayerStore().current!.color} использовал бонус +${steps} шагов. Осталось бонусов: ${currentBonusSteps.value.length}`,
-      );
     } else {
       diceStore.use(steps);
     }
-    const targetCell = findTargetCell(chip.cell, steps)!;
+
+    // Если целевая ячейка не указана, используем первый вариант
+    const target = targetCell;
 
     // Проверка на захват: если в целевой ячейке есть фишка другого игрока и ячейка не безопасна для текущей фишки
-    const otherChips = targetCell.places.filter((p) => p && p.player !== chip.player);
+    const otherChips = target.places.filter((p) => p && p.player !== chip.player);
     let captured = false;
     if (otherChips.length > 0) {
       // Отправляем все чужие фишки на старт
       for (const otherChip of otherChips) {
         if (otherChip) {
-          console.log(`Захват! Фишка игрока ${otherChip.player.color} отправлена на старт.`);
           sendToStart(otherChip);
           captured = true;
         }
@@ -375,8 +443,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     // Выполняем перемещение
-    console.log(`Игрок ${chip.player.color} переместил фишку на ${steps} шагов.`);
-    chip.go(targetCell);
+    chip.go(target);
     selectedChip.value = null;
 
     stateId.value = hasMovableChips.value
@@ -386,10 +453,10 @@ export const useGameStore = defineStore('game', () => {
         : GameStateEnum.WAIT_PLAYER;
 
     // Проверка на финиш
-    if (targetCell.board.type === BoardType.home && targetCell.board.player === chip.player) {
-      const finishBoard = targetCell.board;
+    if (target.board.type === BoardType.home && target.board.player === chip.player) {
+      const finishBoard = target.board;
       const lastCellIndex = finishBoard.cells.length - 1;
-      if (finishBoard.cells.indexOf(targetCell) === lastCellIndex) {
+      if (finishBoard.cells.indexOf(target) === lastCellIndex) {
         chip.finish();
         checkWinner(chip.player);
       }
@@ -404,9 +471,6 @@ export const useGameStore = defineStore('game', () => {
   const addBonus = (steps: number) => {
     // Добавляем отдельный бонусный шаг (10 или 20) в массив
     currentBonusSteps.value.push(steps);
-    console.log(
-      `Игрок получил бонус +${steps} шагов. Теперь бонусы: [${currentBonusSteps.value.join(', ')}]`,
-    );
   };
 
   const checkWinner = (player: Player) => {
@@ -447,6 +511,7 @@ export const useGameStore = defineStore('game', () => {
     selectedChip,
     moveChip,
     getPossibleStepsForChip,
+    findTargetCellVariants,
     currentBonusSteps,
     movableChips,
     hasMovableChips,

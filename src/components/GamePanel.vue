@@ -47,11 +47,26 @@
     <div
       v-for="step in gameStore.getPossibleStepsForChip(gameStore.selectedChip)"
       :key="step"
-      class="q-mt-xs"
+      class="q-mt-md"
     >
-      <button @click="gameStore.moveChip(gameStore.selectedChip, step)">
-        Двинуть на {{ step }}
-      </button>
+      <div class="text-subtitle2 q-mb-xs">Ход на {{ step }}:</div>
+      <div
+        v-for="(targetCell, idx) in gameStore.findTargetCellVariants(
+          gameStore.selectedChip.cell,
+          step,
+        )"
+        :key="idx"
+        class="q-mt-xs"
+      >
+        <button @click="gameStore.moveChip(gameStore.selectedChip, step, targetCell)">
+          Двинуть на {{ step }}
+          <template v-if="targetCell.board.type === BoardType.home">
+            (на финиш, ячейка
+            {{ targetCell.board.cells.indexOf(targetCell) + 1 }})
+          </template>
+          <template v-else> (по основной доске) </template>
+        </button>
+      </div>
     </div>
     <button @click="gameStore.selectedChip = null">Отмена</button>
   </div>
@@ -66,6 +81,7 @@
 </template>
 
 <script setup lang="ts">
+import { BoardType } from 'src/lib/board';
 import { useDiceStore } from 'src/stores/dice';
 import { useGameStore } from 'src/stores/game';
 import { usePlayerStore } from 'src/stores/player';

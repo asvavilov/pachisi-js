@@ -72,6 +72,5 @@ export class Chip {
   finish() {
     this.finished = true;
     // Оставляем фишку на текущей ячейке, но больше не может двигаться
-    console.log(`Фишка ${this.id} игрока ${this.player.color} финишировала!`);
   }
 }

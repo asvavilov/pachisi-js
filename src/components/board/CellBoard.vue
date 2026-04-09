@@ -3,7 +3,7 @@
     class="cell"
     :class="{
       [`player-${playerIndex}-cell`]: playerIndex !== undefined,
-      [`board-${boardType}-cell`]: boardType !== undefined,
+      [`board-${cell.board.type}-cell`]: cell.board.type !== undefined,
       [`cell-${cellIndex}`]: true,
       safe: !!cell.safe,
       highlighted: isCellHighlighted(cellIndex),
@@ -24,7 +24,6 @@
 </template>
 
 <script setup lang="ts">
-import type { BoardType } from 'src/lib/board';
 import type { Cell } from 'src/lib/cell';
 import { Player, type PlayerIndex } from 'src/lib/player';
 import { useGameStore } from 'src/stores/game';
@@ -34,7 +33,6 @@ import ChipBoard from './ChipBoard.vue';
 defineProps<{
   cell: Cell;
   cellIndex: number;
-  boardType?: BoardType;
   playerIndex?: PlayerIndex;
 }>();
 
@@ -59,7 +57,7 @@ function isCellHighlighted(index: number): boolean {
   border-color: var(--color);
 }
 
-.board-main-cell.highlighted {
+.cell.highlighted {
   border-color: #000;
 }
 </style>

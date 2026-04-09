@@ -51,9 +51,6 @@ export const usePlayerStore = defineStore('player', () => {
 
     if (player.chips.every((chip) => chip.finished)) {
       winners.value.push(player);
-      console.log(
-        `🎉 Игрок ${player.color} занял ${winners.value.length} место! Все фишки финишировали.`,
-      );
       return player;
     }
 
