@@ -45,6 +45,7 @@ function isCellHighlighted(index: number, cell: Cell): boolean {
   const highlightedIndices = gameStore.highlightedCellIndices;
 
   if (isHomeBoard) {
+    // FIXME подсвечивать только на финишной дорожке игрока
     // Для финишной доски проверяем индексы вида 1000 + localIndex
     return highlightedIndices.includes(1000 + index);
   } else {

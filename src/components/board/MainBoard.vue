@@ -18,15 +18,12 @@
         :player-index="finishBoard.player?.ind!"
       />
     </template>
-
-    <CenterBoard />
   </div>
 </template>
 
 <script setup lang="ts">
 import CellBoard from './CellBoard.vue';
 import CornerBoard from './CornerBoard.vue';
-import CenterBoard from './CenterBoard.vue';
 import { useBoardStore } from 'src/stores/board';
 import { usePlayerStore } from 'src/stores/player';
 
@@ -311,6 +308,9 @@ const playerStore = usePlayerStore();
 .player-0-cell.cell-6 {
   grid-area: 15 / 11 / 16 / 13;
 }
+.player-0-cell.cell-7 {
+  grid-area: 13 / 11 / 15 / 13;
+}
 
 .player-1-cell.cell-0 {
   grid-area: 11 / 21 / 13 / 22;
@@ -332,6 +332,9 @@ const playerStore = usePlayerStore();
 }
 .player-1-cell.cell-6 {
   grid-area: 11 / 15 / 13 / 16;
+}
+.player-1-cell.cell-7 {
+  grid-area: 11 / 13 / 13 / 15;
 }
 
 .player-2-cell.cell-0 {
@@ -355,6 +358,9 @@ const playerStore = usePlayerStore();
 .player-2-cell.cell-6 {
   grid-area: 8 / 11 / 9 / 13;
 }
+.player-2-cell.cell-7 {
+  grid-area: 9 / 11 / 11 / 13;
+}
 
 .player-3-cell.cell-0 {
   grid-area: 11 / 2 / 13 / 3;
@@ -376,6 +382,9 @@ const playerStore = usePlayerStore();
 }
 .player-3-cell.cell-6 {
   grid-area: 11 / 8 / 13 / 9;
+}
+.player-3-cell.cell-7 {
+  grid-area: 11 / 9 / 13 / 11;
 }
 
 .center {
