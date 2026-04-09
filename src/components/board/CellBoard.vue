@@ -6,7 +6,7 @@
       [`board-${cell.board.type}-cell`]: cell.board.type !== undefined,
       [`cell-${cellIndex}`]: true,
       safe: !!cell.safe,
-      highlighted: isCellHighlighted(cellIndex),
+      highlighted: isCellHighlighted(cellIndex, cell),
     }"
     :style="{
       '--color':
@@ -25,6 +25,7 @@
 
 <script setup lang="ts">
 import type { Cell } from 'src/lib/cell';
+import { BoardType } from 'src/lib/board';
 import { Player, type PlayerIndex } from 'src/lib/player';
 import { useGameStore } from 'src/stores/game';
 import { usePlayerStore } from 'src/stores/player';
@@ -39,8 +40,17 @@ defineProps<{
 const gameStore = useGameStore();
 const playerStore = usePlayerStore();
 
-function isCellHighlighted(index: number): boolean {
-  return gameStore.highlightedCellIndices.includes(index);
+function isCellHighlighted(index: number, cell: Cell): boolean {
+  const isHomeBoard = cell.board.type === BoardType.home;
+  const highlightedIndices = gameStore.highlightedCellIndices;
+
+  if (isHomeBoard) {
+    // Для финишной доски проверяем индексы вида 1000 + localIndex
+    return highlightedIndices.includes(1000 + index);
+  } else {
+    // Для основной доски проверяем обычные индексы
+    return highlightedIndices.includes(index);
+  }
 }
 </script>
 <style scoped>
