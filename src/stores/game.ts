@@ -221,15 +221,17 @@ export const useGameStore = defineStore('game', () => {
       if (!currentCell.io) {
         return variants; // нет перехода
       }
-      // Проверяем, свободна ли выходная ячейка (не занята другой своей фишкой)
+      // Выходная ячейка безопасна только для своего цвета.
+      // Проверяем, не занята ли ячейка своей же фишкой
       const exitCell = currentCell.io;
-      const isExitFree = exitCell.places.every((p) => p === null);
-      if (!isExitFree) {
-        return variants; // ячейка занята
-      }
-      // Также проверяем, не заблокирована ли ячейка (блок из двух фишек одного цвета)
+      // Если ячейка заблокирована (две фишки одного цвета) — выход невозможен
       if (isCellBlocked(exitCell)) {
         return variants;
+      }
+      const player = currentCell.board.player;
+      const ownChipsOnExit = exitCell.places.filter((p) => p && player && p.player === player);
+      if (ownChipsOnExit.length > 0) {
+        return variants; // ячейка занята своей фишкой
       }
       variants.push(exitCell);
       return variants;
