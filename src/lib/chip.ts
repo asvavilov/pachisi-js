@@ -1,5 +1,5 @@
 import type { Cell } from './cell';
-import type { Player } from './player';
+import type { Player, PlayerData } from './player';
 import { toRaw } from 'vue';
 
 let chipIdCounter = 0;
@@ -8,7 +8,7 @@ let chipIdCounter = 0;
  * фишка
  */
 export class Chip {
-  player: Player;
+  player: PlayerData;
   cell: Cell;
   go: (to_cell: Cell) => void;
   readonly id: number;
@@ -18,7 +18,7 @@ export class Chip {
     /**
      * связь с игроком
      */
-    this.player = player;
+    this.player = toRaw(player) as PlayerData;
     /**
      * связь с ячейкой
      */

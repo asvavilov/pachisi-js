@@ -3,11 +3,12 @@ import { useDiceStore } from './dice';
 import { usePlayerStore } from './player';
 import type { Cell } from 'src/lib/cell';
 import type { Chip } from 'src/lib/chip';
-import { Player } from 'src/lib/player';
+import type { Player } from 'src/lib/player';
 import { computed, ref } from 'vue';
 import { GameStateEnum, GameStateTree } from 'src/lib/GameState';
 import type { Board } from 'src/lib/board';
 import { BoardType } from 'src/lib/board';
+import type { PlayerIndex, PlayerData } from 'src/lib/player';
 import { useBoardStore } from './board';
 
 /**
@@ -32,14 +33,42 @@ export const useGameStore = defineStore('game', () => {
   const currentBonusSteps = ref<number[]>([]); // бонусные шаги за захват в текущем ходе (10 или 20)
 
   /**
+   * Текущий индекс игрока (для этапа SELECT_FIRST)
+   */
+  const currentIndex = computed({
+    get: () => playerStore.currentIndex,
+    set: (val: PlayerIndex | undefined) => {
+      if (val !== undefined) {
+        playerStore.init(val);
+      }
+    },
+  });
+
+  /**
+   * Этап выбора первого игрока: индекс игрока, чья очередь бросать
+   */
+  const firstRollPlayerIndex = ref<PlayerIndex>(0);
+  /**
+   * Результаты бросков на этапе выбора первого игрока
+   */
+  const firstRollResults = ref<Record<PlayerIndex, number>>({ 0: 0, 1: 0, 2: 0, 3: 0 });
+
+  /**
+   * Счётчик дублей подряд
+   */
+  const doublesCount = ref(0);
+
+  /**
    * Инициализация начала игры.
    */
   const initGame = () => {
-    // TODO пока пропускаем этап выбора игрока и выбираем первого автоматически
-    //stateId.value = GameStateEnum.SELECT_FIRST;
     playerStore.init();
     diceStore.reset();
-    stateId.value = GameStateEnum.WAIT_ROLL;
+    firstRollPlayerIndex.value = 0;
+    firstRollResults.value = { 0: 0, 1: 0, 2: 0, 3: 0 };
+    doublesCount.value = 0;
+    currentIndex.value = 0;
+    stateId.value = GameStateEnum.SELECT_FIRST;
   };
 
   /**
@@ -48,6 +77,23 @@ export const useGameStore = defineStore('game', () => {
   const rollDice = () => {
     prepareRollDice();
     diceStore.roll();
+
+    // 1.1 Этап выбора первого игрока
+    if (stateId.value === GameStateEnum.SELECT_FIRST) {
+      handleSelectFirstRoll();
+      return;
+    }
+
+    // 1.3 Отслеживание дублей
+    if (diceStore.isEquals) {
+      doublesCount.value++;
+      if (doublesCount.value >= 3) {
+        handleThreeDoubles();
+        doublesCount.value = 0;
+      }
+    } else {
+      doublesCount.value = 0;
+    }
 
     if (hasMovableChips.value) {
       stateId.value = GameStateEnum.WAIT_STEP;
@@ -59,6 +105,72 @@ export const useGameStore = defineStore('game', () => {
         //nextPlayer();
         stateId.value = GameStateEnum.WAIT_PLAYER;
       }
+    }
+  };
+
+  /**
+   * 1.1 Обработка броска на этапе выбора первого игрока
+   */
+  const handleSelectFirstRoll = () => {
+    const idx = firstRollPlayerIndex.value;
+    firstRollResults.value[idx] = diceStore.sum;
+
+    // Обновляем текущего игрока для отображения
+    currentIndex.value = idx;
+
+    // Переход к следующему игроку
+    const nextIdx = ((idx + 1) % 4) as PlayerIndex;
+
+    // Если все 4 игрока бросили
+    if (nextIdx === 0) {
+      selectFirstPlayer();
+    } else {
+      firstRollPlayerIndex.value = nextIdx;
+    }
+  };
+
+  /**
+   * 1.1 Выбор первого игрока по минимальному броску
+   */
+  const selectFirstPlayer = () => {
+    const results = firstRollResults.value;
+    const values = [results[0], results[1], results[2], results[3]];
+
+    // Находим минимальное значение
+    const minVal = Math.min(...values);
+
+    // Находим всех игроков с минимальным значением
+    const candidates: PlayerIndex[] = [];
+    for (let i = 0; i < 4; i++) {
+      if (values[i] === minVal) {
+        candidates.push(i as PlayerIndex);
+      }
+    }
+
+    if (candidates.length === 1) {
+      // Один победитель — устанавливаем его первым
+      const winner = candidates[0]!;
+      playerStore.init(winner);
+      doublesCount.value = 0;
+      stateId.value = GameStateEnum.WAIT_ROLL;
+    } else {
+      // Ничья — перебрасываются только игроки с минимальным значением
+      firstRollResults.value = { 0: 0, 1: 0, 2: 0, 3: 0 };
+      firstRollPlayerIndex.value = candidates[0]!;
+      // Состояние остаётся SELECT_FIRST
+    }
+  };
+
+  /**
+   * 1.3 Три дубля подряд — ближайшая к финишу фишка на базу
+   */
+  const handleThreeDoubles = () => {
+    const player = playerStore.current;
+    if (!player) return;
+
+    const chip = player.getClosestToFinishChip();
+    if (chip) {
+      sendToStart(chip);
     }
   };
 
@@ -368,18 +480,18 @@ export const useGameStore = defineStore('game', () => {
   /**
    * Проверка, является ли ячейка безопасной (защищает от захвата) для заданного игрока
    */
-  const isSafeCell = (cell: Cell, forPlayer?: Player): boolean => {
+  const isSafeCell = (cell: Cell, forPlayer?: PlayerData): boolean => {
     const safe = cell.safe;
     if (safe === true) {
       return true; // общая безопасная ячейка
     }
-    if (safe instanceof Player) {
+    if (safe && typeof safe === 'object' && 'ind' in safe) {
       // стартовая ячейка конкретного игрока
       if (forPlayer === undefined) {
         // Без указания игрока считаем, что ячейка безопасна (для кого-то)
         return true;
       }
-      return safe === forPlayer;
+      return safe.ind === forPlayer.ind;
     }
     return false; // не безопасна
   };
@@ -464,6 +576,8 @@ export const useGameStore = defineStore('game', () => {
       const lastCellIndex = finishBoard.cells.length - 1;
       if (finishBoard.cells.indexOf(target) === lastCellIndex) {
         chip.finish();
+        // 1.2 Бонус +10 за попадание в дом
+        addBonus(10);
         checkWinner(chip.player);
       }
     }
@@ -479,9 +593,9 @@ export const useGameStore = defineStore('game', () => {
     currentBonusSteps.value.push(steps);
   };
 
-  const checkWinner = (player: Player) => {
+  const checkWinner = (player: PlayerData) => {
     // Проверить, не победил ли игрок
-    const isWinner = playerStore.checkWinner(player);
+    const isWinner = playerStore.checkWinner(player as Player);
     if (isWinner === player) {
       // TODO пока только один победитель
       stateId.value = GameStateEnum.FINISH;
@@ -492,7 +606,9 @@ export const useGameStore = defineStore('game', () => {
    * Отправить фишку на стартовую ячейку её игрока
    */
   const sendToStart = (chip: Chip) => {
-    const player = chip.player;
+    const playerIndex = chip.player.ind;
+    const player = playerStore.players[playerIndex];
+    if (!player) return;
     const startBoard = player.baseBoard;
     const startCell = startBoard.cells[0]!;
     chip.go(startCell);
@@ -500,6 +616,8 @@ export const useGameStore = defineStore('game', () => {
 
   // Обработчик клика на фишку
   const onChipClick = (chip: Chip | null | undefined) => {
+    // Блокируем выбор фишек на этапе выбора первого игрока
+    if (stateId.value === GameStateEnum.SELECT_FIRST) return;
     if (chip && isChipAvailable(chip)) {
       selectedChip.value = chip;
     }
@@ -523,5 +641,10 @@ export const useGameStore = defineStore('game', () => {
     hasMovableChips,
     nextPlayer,
     isChipAvailable,
+    // 1.1 Этап выбора первого игрока
+    firstRollPlayerIndex,
+    firstRollResults,
+    // 1.3 Счётчик дублей
+    doublesCount,
   };
 });

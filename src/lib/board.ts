@@ -1,5 +1,5 @@
 import { Cell } from './cell';
-import type { Player } from './player';
+import type { PlayerData } from './player';
 
 export enum BoardType {
   base = 'base',
@@ -12,14 +12,14 @@ export enum BoardType {
  */
 export class Board {
   type: BoardType;
-  player: Player | undefined;
+  player: PlayerData | undefined;
   cells: Cell[];
 
   constructor(
     type: BoardType,
-    player: Player | undefined,
+    player: PlayerData | undefined,
     len: number,
-    safes: Record<number, Player | boolean> | undefined,
+    safes: Record<number, PlayerData | boolean> | undefined,
     ios: Record<number, Cell> | undefined,
     sizes?: Record<number, number>,
   ) {

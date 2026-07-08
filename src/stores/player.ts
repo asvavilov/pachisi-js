@@ -18,8 +18,8 @@ export const usePlayerStore = defineStore('player', () => {
   const currentIndex = ref<PlayerIndex>();
   const winners = ref<Player[]>([]); // победитель игры, если есть
 
-  const init = () => {
-    currentIndex.value = 0;
+  const init = (startIndex?: PlayerIndex) => {
+    currentIndex.value = startIndex ?? 0;
     winners.value = [];
   };
 
@@ -60,6 +60,7 @@ export const usePlayerStore = defineStore('player', () => {
   return {
     players,
     winners,
+    currentIndex,
     init,
     next,
     current,

@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia';
 import { Board, BoardType } from 'src/lib/board';
 import { lastElement, firstElement } from 'src/utils/array';
-import { computed } from 'vue';
+import { computed, toRaw } from 'vue';
 import { usePlayerStore } from './player';
+import type { PlayerData } from 'src/lib/player';
 
 /**
  * доски (основная и финишные для игроков)
@@ -14,17 +15,17 @@ export const useBoardStore = defineStore('board', () => {
   /**
    * карта ячеек безопасности
    */
-  const safes = {
-    4: players[0]!,
+  const safes: Record<number, PlayerData | boolean> = {
+    4: toRaw(players[0]!) as PlayerData,
     11: true,
     16: true,
-    21: players[1]!,
+    21: toRaw(players[1]!) as PlayerData,
     28: true,
     33: true,
-    38: players[2]!,
+    38: toRaw(players[2]!) as PlayerData,
     45: true,
     50: true,
-    55: players[3]!,
+    55: toRaw(players[3]!) as PlayerData,
     62: true,
     67: true,
   };

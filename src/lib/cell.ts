@@ -1,20 +1,20 @@
 import { reactive } from 'vue';
 import type { Board } from './board';
 import type { Chip } from './chip';
-import type { Player } from './player';
+import type { PlayerData } from './player';
 
 /**
  * ячейка доски
  */
 export class Cell {
   board: Board;
-  safe: Player | boolean | undefined;
+  safe: PlayerData | boolean | undefined;
   io: Cell | undefined;
   size: number;
   places: (Chip | null)[];
   constructor(
     board: Board,
-    safe: Player | boolean | undefined,
+    safe: PlayerData | boolean | undefined,
     io: Cell | undefined,
     size: number | undefined,
   ) {

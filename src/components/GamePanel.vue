@@ -2,7 +2,39 @@
   <div class="info-panel q-pa-md q-mb-md" style="background-color: #f0f0f0; border-radius: 8px">
     <div class="text-h6">Ход игры</div>
     <div>{{ gameStore.stateId }}</div>
-    <div class="row items-center q-gutter-lg">
+
+    <!-- 1.1 Этап выбора первого игрока -->
+    <div v-if="gameStore.stateId === GameStateEnum.SELECT_FIRST" class="q-mt-md">
+      <div class="text-subtitle2 q-mb-sm">Выбор первого игрока:</div>
+      <div class="q-mb-sm">
+        Бросает игрок {{ gameStore.firstRollPlayerIndex }} ({{
+          playerStore.players[gameStore.firstRollPlayerIndex]?.color
+        }})
+      </div>
+      <div class="q-mb-sm">
+        <div v-for="i in 4" :key="i" class="q-mb-xs">
+          Игрок {{ i - 1 }}: {{ (gameStore.firstRollResults as any)[i - 1] || '—' }}
+        </div>
+      </div>
+      <div
+        v-if="
+          gameStore.firstRollResults[0] &&
+          gameStore.firstRollResults[1] &&
+          gameStore.firstRollResults[2] &&
+          gameStore.firstRollResults[3]
+        "
+      >
+        Победитель выбора: игрок {{ getFirstPlayerIndex() }} ({{
+          playerStore.players[getFirstPlayerIndex()]?.color
+        }})
+      </div>
+    </div>
+
+    <!-- Текущий игрок (не показываем на этапе SELECT_FIRST) -->
+    <div
+      v-if="gameStore.stateId !== GameStateEnum.SELECT_FIRST"
+      class="row items-center q-gutter-lg"
+    >
       <div v-if="playerStore.current">
         <strong>Текущий игрок:</strong>
         <span class="q-ml-sm" :style="{ color: playerStore.current.color }">
@@ -10,36 +42,48 @@
         </span>
       </div>
     </div>
-  </div>
 
-  <div>
-    <button @click="gameStore.rollDice()" :disabled="!gameStore.state.canRollDice">
-      Бросить кости
-    </button>
-    <span class="q-ml-md">
-      <template v-if="diceStore.rolled">
-        <input
-          v-if="diceStore.items[0] !== undefined"
-          type="number"
-          min="1"
-          max="6"
-          v-model="diceStore.items[0]"
-        />
-        <input
-          v-if="diceStore.items[1] !== undefined"
-          type="number"
-          min="1"
-          max="6"
-          v-model="diceStore.items[1]"
-        />
-        <!--{{ diceStore.items.join(' + ') }} = -->{{ diceStore.sum }}
-        <span v-if="diceStore.used.length > 0"> (использовано: {{ usedDiceText }})</span>
-        <span v-if="gameStore.currentBonusSteps.length > 0" class="q-ml-md" style="color: green">
-          Бонусы доступны: {{ gameStore.currentBonusSteps.map((s) => `+${s}`).join(', ') }}
-        </span>
-      </template>
-      <template v-else-if="gameStore.state.canRollDice">Бросьте кости</template>
-    </span>
+    <div>
+      <button @click="gameStore.rollDice()" :disabled="!gameStore.state.canRollDice">
+        Бросить кости
+      </button>
+      <span class="q-ml-md">
+        <template v-if="diceStore.rolled">
+          <input
+            v-if="diceStore.items[0] !== undefined"
+            type="number"
+            min="1"
+            max="6"
+            v-model="diceStore.items[0]"
+          />
+          <input
+            v-if="diceStore.items[1] !== undefined"
+            type="number"
+            min="1"
+            max="6"
+            v-model="diceStore.items[1]"
+          />
+          <!--{{ diceStore.items.join(' + ') }} = -->{{ diceStore.sum }}
+          <span v-if="diceStore.used.length > 0"> (использовано: {{ usedDiceText }})</span>
+          <span v-if="gameStore.currentBonusSteps.length > 0" class="q-ml-md" style="color: green">
+            Бонусы доступны: {{ gameStore.currentBonusSteps.map((s) => `+${s}`).join(', ') }}
+          </span>
+        </template>
+        <template v-else-if="gameStore.state.canRollDice">Бросьте кости</template>
+      </span>
+    </div>
+
+    <!-- 1.3 Отображение счётчика дублей -->
+    <div
+      v-if="gameStore.doublesCount > 0 && gameStore.stateId !== GameStateEnum.SELECT_FIRST"
+      class="q-mt-md"
+      style="color: orange; font-weight: bold"
+    >
+      ⚠️ Дубли подряд: {{ gameStore.doublesCount }}/3
+      <div v-if="gameStore.doublesCount >= 2" style="font-size: 0.85em; color: red">
+        Следующий дубль вернёт ближайшую к финишу фишку на базу!
+      </div>
+    </div>
   </div>
 
   <div v-if="gameStore.selectedChip" class="q-mt-md selected-chip-panel">
@@ -82,6 +126,7 @@
 
 <script setup lang="ts">
 import { BoardType } from 'src/lib/board';
+import { GameStateEnum } from 'src/lib/GameState';
 import { useDiceStore } from 'src/stores/dice';
 import { useGameStore } from 'src/stores/game';
 import { usePlayerStore } from 'src/stores/player';
@@ -94,6 +139,20 @@ const playerStore = usePlayerStore();
 const usedDiceText = computed(() => {
   return diceStore.used.join(', ') || 'нет';
 });
+
+/**
+ * 1.1 Получить индекс первого игрока (с минимальным броском)
+ */
+const getFirstPlayerIndex = (): number => {
+  const results = gameStore.firstRollResults;
+  if (!results[0] && !results[1] && !results[2] && !results[3]) return -1;
+  const values = [results[0], results[1], results[2], results[3]];
+  const minVal = Math.min(...values);
+  for (let i = 0; i < 4; i++) {
+    if (values[i] === minVal) return i;
+  }
+  return -1;
+};
 </script>
 
 <style scoped>
