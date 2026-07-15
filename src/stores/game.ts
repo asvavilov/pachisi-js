@@ -4,12 +4,23 @@ import { usePlayerStore } from './player';
 import type { Cell } from 'src/lib/cell';
 import type { Chip } from 'src/lib/chip';
 import type { Player } from 'src/lib/player';
-import { computed, ref } from 'vue';
+import { computed, ref, reactive } from 'vue';
 import { GameStateEnum, GameStateTree } from 'src/lib/GameState';
 import type { Board } from 'src/lib/board';
 import { BoardType } from 'src/lib/board';
 import type { PlayerIndex, PlayerData } from 'src/lib/player';
 import { useBoardStore } from './board';
+
+/**
+ * Запись в логе отладки
+ */
+export interface DebugEntry {
+  timestamp: number;
+  function: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  data?: Record<string, unknown>;
+}
 
 /**
  * игра
@@ -31,6 +42,39 @@ export const useGameStore = defineStore('game', () => {
   const selectedChip = ref<Chip | null>(null);
 
   const currentBonusSteps = ref<number[]>([]); // бонусные шаги за захват в текущем ходе (10 или 20)
+
+  // ---- Debug логирование ----
+  const debug = reactive({
+    log: [] as DebugEntry[],
+    enabled: true,
+  });
+
+  const debugLogPush = (
+    fn: string,
+    message: string,
+    type: DebugEntry['type'] = 'info',
+    data?: Record<string, unknown>,
+  ) => {
+    if (!debug.enabled) return;
+    const entry: DebugEntry = {
+      timestamp: Date.now(),
+      function: fn,
+      message,
+      type,
+    };
+    if (data !== undefined) {
+      entry.data = data;
+    }
+    debug.log.push(entry);
+    if (debug.log.length > 500) {
+      debug.log.splice(0, debug.log.length - 500);
+    }
+  };
+
+  const clearDebugLog = () => {
+    debug.log.splice(0, debug.log.length);
+  };
+  // ---- /Debug логирование ----
 
   /**
    * Текущий индекс игрока (для этапа SELECT_FIRST)
@@ -69,6 +113,8 @@ export const useGameStore = defineStore('game', () => {
     doublesCount.value = 0;
     currentIndex.value = 0;
     stateId.value = GameStateEnum.SELECT_FIRST;
+    clearDebugLog();
+    debugLogPush('initGame', 'Игра инициализирована, состояние: SELECT_FIRST', 'info');
   };
 
   /**
@@ -77,6 +123,10 @@ export const useGameStore = defineStore('game', () => {
   const rollDice = () => {
     prepareRollDice();
     diceStore.roll();
+    debugLogPush('rollDice', `Выпало: [${diceStore.items.join(', ')}] = ${diceStore.sum}`, 'info', {
+      items: [...diceStore.items],
+      sum: diceStore.sum,
+    });
 
     // 1.1 Этап выбора первого игрока
     if (stateId.value === GameStateEnum.SELECT_FIRST) {
@@ -87,6 +137,9 @@ export const useGameStore = defineStore('game', () => {
     // 1.3 Отслеживание дублей
     if (diceStore.isEquals) {
       doublesCount.value++;
+      debugLogPush('rollDice', `Дубль! Счётчик: ${doublesCount.value}/3`, 'warning', {
+        doublesCount: doublesCount.value,
+      });
       if (doublesCount.value >= 3) {
         handleThreeDoubles();
         doublesCount.value = 0;
@@ -96,12 +149,19 @@ export const useGameStore = defineStore('game', () => {
     }
 
     if (hasMovableChips.value) {
+      debugLogPush(
+        'rollDice',
+        `Есть доступные ходы (${movableChips.value.length} фишек) → WAIT_STEP`,
+        'success',
+      );
       stateId.value = GameStateEnum.WAIT_STEP;
     } else {
       if (canAddonRollDice.value) {
+        debugLogPush('rollDice', 'Нет ходов, но есть доп. бросок → WAIT_ROLL', 'warning');
         prepareAddonRollDice();
         stateId.value = GameStateEnum.WAIT_ROLL;
       } else {
+        debugLogPush('rollDice', 'Нет ходов → WAIT_PLAYER', 'warning');
         //nextPlayer();
         stateId.value = GameStateEnum.WAIT_PLAYER;
       }
@@ -114,6 +174,12 @@ export const useGameStore = defineStore('game', () => {
   const handleSelectFirstRoll = () => {
     const idx = firstRollPlayerIndex.value;
     firstRollResults.value[idx] = diceStore.sum;
+    debugLogPush(
+      'handleSelectFirstRoll',
+      `Игрок ${idx} (${playerStore.players[idx]?.color}) выбросил ${diceStore.sum}`,
+      'info',
+      { playerIndex: idx, sum: diceStore.sum },
+    );
 
     // Обновляем текущего игрока для отображения
     currentIndex.value = idx;
@@ -126,6 +192,7 @@ export const useGameStore = defineStore('game', () => {
       selectFirstPlayer();
     } else {
       firstRollPlayerIndex.value = nextIdx;
+      debugLogPush('handleSelectFirstRoll', `Очередь броска: игрок ${nextIdx}`, 'info');
     }
   };
 
@@ -153,8 +220,20 @@ export const useGameStore = defineStore('game', () => {
       playerStore.init(winner);
       doublesCount.value = 0;
       stateId.value = GameStateEnum.WAIT_ROLL;
+      debugLogPush(
+        'selectFirstPlayer',
+        `Первый игрок: ${winner} (${playerStore.players[winner]?.color}), результаты: [${values.join(', ')}]`,
+        'success',
+        { winner, values },
+      );
     } else {
       // Ничья — перебрасываются только игроки с минимальным значением
+      debugLogPush(
+        'selectFirstPlayer',
+        `Ничья между игроками [${candidates.join(', ')}] со значением ${minVal}, переброс`,
+        'warning',
+        { candidates, minVal },
+      );
       firstRollResults.value = { 0: 0, 1: 0, 2: 0, 3: 0 };
       firstRollPlayerIndex.value = candidates[0]!;
       // Состояние остаётся SELECT_FIRST
@@ -166,11 +245,22 @@ export const useGameStore = defineStore('game', () => {
    */
   const handleThreeDoubles = () => {
     const player = playerStore.current;
-    if (!player) return;
+    if (!player) {
+      debugLogPush('handleThreeDoubles', 'Нет текущего игрока', 'error');
+      return;
+    }
 
     const chip = player.getClosestToFinishChip();
     if (chip) {
+      debugLogPush(
+        'handleThreeDoubles',
+        `3 дубля подряд! Фишка #${chip.id} (${chip.player.color}) отправляется на базу`,
+        'error',
+        { chipId: chip.id, playerColor: chip.player.color },
+      );
       sendToStart(chip);
+    } else {
+      debugLogPush('handleThreeDoubles', '3 дубля подряд, но нет фишек для отправки', 'warning');
     }
   };
 
@@ -196,11 +286,17 @@ export const useGameStore = defineStore('game', () => {
    * переход хода к следующему игроку
    */
   const nextPlayer = () => {
+    const prevPlayer = playerStore.current?.color;
     diceStore.reset();
     playerStore.next();
+    const nextPlayerColor = playerStore.current?.color;
 
     prepareRollDice();
     stateId.value = GameStateEnum.WAIT_ROLL;
+    debugLogPush('nextPlayer', `Ход перешёл от ${prevPlayer} к ${nextPlayerColor}`, 'info', {
+      from: prevPlayer,
+      to: nextPlayerColor,
+    });
   };
 
   /**
@@ -361,7 +457,18 @@ export const useGameStore = defineStore('game', () => {
       if (isCellBlocked(targetCell)) {
         return variants;
       }
-      variants.push(targetCell);
+      // Проверяем промежуточные ячейки на финишной дорожке — нельзя пройти сквозь блок
+      let pathBlocked = false;
+      for (let i = idx + 1; i < newIdx; i++) {
+        const cell = currentCell.board.cells[i]!;
+        if (isCellBlocked(cell)) {
+          pathBlocked = true;
+          break;
+        }
+      }
+      if (!pathBlocked) {
+        variants.push(targetCell);
+      }
       return variants;
     }
 
@@ -388,23 +495,25 @@ export const useGameStore = defineStore('game', () => {
       }
     }
 
-    // FIXME проверить вариант:
-    // когда на переходной ячейке текущего игрока стоит фишка другого игрока
-    // вроде, тогда не покажет вариант поворота
-
     // Вариант 2: проверка возможности поворота на финишную доску
     // Определяем игрока по текущей ячейке (фишка принадлежит какому-то игроку)
     // Но у нас нет прямой ссылки, поэтому используем playerStore.current
     const player = playerStore.current!;
     const homeBoard = player.homeBoard;
 
-    // Находим индекс ячейки входа на финишную доску
+    // Находим ячейку входа на финишную доску
     // Это ячейка основной доски, связанная с первой ячейкой финишной доски
     const entranceCell = homeBoard.cells[0]!.io;
     if (!entranceCell || entranceCell.board.type !== BoardType.main) {
       return variants; // нет входа на финиш
     }
     const entranceIndex = mainBoard.cells.indexOf(entranceCell);
+
+    // Если вход на финишную дорожку заблокирован (2 фишки одного цвета),
+    // то поворот невозможен — нельзя пройти сквозь блок
+    if (isCellBlocked(entranceCell)) {
+      return variants;
+    }
 
     // Проверяем, проходит ли путь через точку входа на финиш
     const pathToEntrance = getIntermediateCellsOnBoard(currentCell, steps, mainBoard);
@@ -509,7 +618,6 @@ export const useGameStore = defineStore('game', () => {
   };
 
   /**
-   * TODO еще нужна функция, которая проверяет нет ли на пути заблокированной ячейки
    * Проверка, является ли ячейка заблокированной (блок)
    * Блок образуют:
    * - фишки одного цвета на любой ячейке заняли все места
@@ -529,6 +637,11 @@ export const useGameStore = defineStore('game', () => {
     // Проверяем, что выбранный шаг соответствует доступному кубику
     const availableSteps = getAvailableSteps();
     if (!availableSteps.includes(steps)) {
+      debugLogPush('moveChip', `Шаг ${steps} недоступен для фишки #${chip.id}`, 'error', {
+        chipId: chip.id,
+        steps,
+        availableSteps,
+      });
       return false;
     }
     // Определяем, является ли шаг бонусным (10 или 20)
@@ -536,8 +649,13 @@ export const useGameStore = defineStore('game', () => {
     if (bonusIndex !== -1) {
       // Используем бонусный шаг
       currentBonusSteps.value.splice(bonusIndex, 1);
+      debugLogPush('moveChip', `Использован бонусный шаг +${steps}`, 'success', {
+        steps,
+        bonusType: steps === 20 ? 'capture' : 'finish',
+      });
     } else {
       diceStore.use(steps);
+      debugLogPush('moveChip', `Использован кубик ${steps}`, 'info', { steps });
     }
 
     // Если целевая ячейка не указана, используем первый вариант
@@ -550,6 +668,12 @@ export const useGameStore = defineStore('game', () => {
       // Отправляем все чужие фишки на старт
       for (const otherChip of otherChips) {
         if (otherChip) {
+          debugLogPush(
+            'moveChip',
+            `Захват! Фишка #${otherChip.id} (${otherChip.player.color}) отправлена на базу`,
+            'success',
+            { capturedChipId: otherChip.id, capturedColor: otherChip.player.color },
+          );
           sendToStart(otherChip);
           captured = true;
         }
@@ -557,6 +681,7 @@ export const useGameStore = defineStore('game', () => {
       // Начисляем бонус +20 за захват
       if (captured) {
         addBonus(20);
+        debugLogPush('moveChip', 'Бонус +20 за захват', 'success');
       }
     }
 
@@ -570,6 +695,18 @@ export const useGameStore = defineStore('game', () => {
         ? GameStateEnum.WAIT_ROLL
         : GameStateEnum.WAIT_PLAYER;
 
+    debugLogPush(
+      'moveChip',
+      `Фишка #${chip.id} → ${target.board.type === BoardType.home ? `home[${target.board.cells.indexOf(target)}]` : `main[${target.board.cells.indexOf(target)}]`}, состояние: ${stateId.value}`,
+      'success',
+      {
+        chipId: chip.id,
+        targetBoardType: target.board.type,
+        targetIdx: target.board.cells.indexOf(target),
+        newState: stateId.value,
+      },
+    );
+
     // Проверка на финиш
     if (target.board.type === BoardType.home && target.board.player === chip.player) {
       const finishBoard = target.board;
@@ -578,6 +715,9 @@ export const useGameStore = defineStore('game', () => {
         chip.finish();
         // 1.2 Бонус +10 за попадание в дом
         addBonus(10);
+        debugLogPush('moveChip', `Фишка #${chip.id} финишировала! Бонус +10`, 'success', {
+          chipId: chip.id,
+        });
         checkWinner(chip.player);
       }
     }
@@ -608,10 +748,19 @@ export const useGameStore = defineStore('game', () => {
   const sendToStart = (chip: Chip) => {
     const playerIndex = chip.player.ind;
     const player = playerStore.players[playerIndex];
-    if (!player) return;
+    if (!player) {
+      debugLogPush('sendToStart', `Игрок ${playerIndex} не найден`, 'error', { playerIndex });
+      return;
+    }
     const startBoard = player.baseBoard;
     const startCell = startBoard.cells[0]!;
     chip.go(startCell);
+    debugLogPush(
+      'sendToStart',
+      `Фишка #${chip.id} (${chip.player.color}) отправлена на базу`,
+      'warning',
+      { chipId: chip.id, playerColor: chip.player.color },
+    );
   };
 
   // Обработчик клика на фишку
@@ -646,5 +795,9 @@ export const useGameStore = defineStore('game', () => {
     firstRollResults,
     // 1.3 Счётчик дублей
     doublesCount,
+    // Debug
+    debug,
+    debugLogPush,
+    clearDebugLog,
   };
 });

@@ -1,0 +1,406 @@
+# План тестирования игры «Парчис»
+
+## 1. Выбор тестового фреймворка
+
+**Vitest** — идеально подходит для Vite-проектов (Quasar использует Vite). Быстрый, совместим с TypeScript, поддерживает Pinia.
+
+**Установка:**
+
+```bash
+npm install -D vitest @vue/test-utils jsdom
+```
+
+**Настройка:** добавить в `quasar.config.ts` или создать `vitest.config.ts`.
+
+---
+
+## 2. Структура тестов
+
+```
+src/
+├── lib/
+│   ├── __tests__/
+│   │   ├── board.test.ts
+│   │   ├── cell.test.ts
+│   │   ├── chip.test.ts
+│   │   ├── player.test.ts
+│   │   └── GameState.test.ts
+├── stores/
+│   ├── __tests__/
+│   │   ├── dice.test.ts
+│   │   ├── player.test.ts
+│   │   ├── board.test.ts
+│   │   └── game.test.ts
+├── utils/
+│   ├── __tests__/
+│   │   └── array.test.ts
+```
+
+---
+
+## 3. Тесты для `src/lib/` (чистая логика, без Vue)
+
+### 3.1 `GameState.test.ts` — Состояния игры
+
+| #   | Тест                                                                | Описание                                                                        |
+| --- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| 1   | `GameStateEnum содержит все 6 состояний`                            | Проверка наличия START, SELECT_FIRST, WAIT_ROLL, WAIT_STEP, WAIT_PLAYER, FINISH |
+| 2   | `GameStateTree.START: canRollDice=false, canFinishRoll=false`       | Начало игры — ничего нельзя                                                     |
+| 3   | `GameStateTree.SELECT_FIRST: canRollDice=true, canFinishRoll=false` | Выбор первого — можно бросать                                                   |
+| 4   | `GameStateTree.WAIT_ROLL: canRollDice=true, canFinishRoll=false`    | Ожидание броска                                                                 |
+| 5   | `GameStateTree.WAIT_STEP: canRollDice=false, canFinishRoll=false`   | Ожидание хода                                                                   |
+| 6   | `GameStateTree.WAIT_PLAYER: canRollDice=false, canFinishRoll=true`  | Ожидание смены игрока                                                           |
+| 7   | `GameStateTree.FINISH: canRollDice=false, canFinishRoll=false`      | Конец игры                                                                      |
+
+### 3.2 `board.test.ts` — Доска
+
+| #   | Тест                                        | Описание                                |
+| --- | ------------------------------------------- | --------------------------------------- |
+| 1   | `BoardType содержит base, main, home`       | Проверка enum                           |
+| 2   | `Board создаёт ячейки правильной длины`     | main=68, base=1, home=8                 |
+| 3   | `Board.cells содержит Cell экземпляры`      | Все элементы — Cell                     |
+| 4   | `Board с safes создаёт безопасные ячейки`   | Проверка cell.safe для переданных safes |
+| 5   | `Board с ios создаёт переходные ячейки`     | Проверка cell.io для переданных ios     |
+| 6   | `Board с sizes создаёт ячейки с размерами`  | Проверка cell.size                      |
+| 7   | `Board без safes — все ячейки не безопасны` | cell.safe === false                     |
+| 8   | `Board без ios — все io === undefined`      | cell.io === undefined                   |
+| 9   | `Board без sizes — размер по умолчанию 2`   | cell.size === 2                         |
+
+### 3.3 `cell.test.ts` — Ячейка
+
+| #   | Тест                                    | Описание               |
+| --- | --------------------------------------- | ---------------------- |
+| 1   | `Cell создаётся с правильным board`     | Ссылка на доску        |
+| 2   | `Cell.places — массив длины size`       | places.length === size |
+| 3   | `Cell.places заполнен null`             | Все элементы null      |
+| 4   | `Cell.safe === false по умолчанию`      | Без safe параметра     |
+| 5   | `Cell.safe === true при передаче true`  |                        |
+| 6   | `Cell.safe === PlayerData при передаче` |                        |
+| 7   | `Cell.io === undefined по умолчанию`    |                        |
+| 8   | `Cell.io === другая Cell при передаче`  |                        |
+| 9   | `Cell.size === 2 по умолчанию`          |                        |
+| 10  | `Cell.size === переданному значению`    |                        |
+
+### 3.4 `chip.test.ts` — Фишка
+
+| #   | Тест                                                                      | Описание                                      |
+| --- | ------------------------------------------------------------------------- | --------------------------------------------- |
+| 1   | `Chip создаётся с уникальным id`                                          | Каждая новая фишка имеет id+1                 |
+| 2   | `Chip.player === PlayerData`                                              | Ссылка на данные игрока                       |
+| 3   | `Chip.cell === переданная ячейка`                                         |                                               |
+| 4   | `Chip.finished === false по умолчанию`                                    |                                               |
+| 5   | `Chip занимает место в cell.places[placeIndex]`                           | После создания placeIndex занят               |
+| 6   | `Chip.go() перемещает фишку в другую ячейку`                              | Старая ячейка освобождается, новая занимается |
+| 7   | `Chip.go() находит свободное место`                                       | Если первое место занято, ищет следующее      |
+| 8   | `Chip.finish() устанавливает finished=true`                               |                                               |
+| 9   | `Chip.finish() не удаляет фишку из ячейки`                                | Остаётся на месте                             |
+| 10  | **Крайний случай:** `Chip.go()` когда нет свободных мест — `console.warn` | Проверить, что вызывается предупреждение      |
+
+### 3.5 `player.test.ts` — Игрок
+
+| #   | Тест                                                                              | Описание                               |
+| --- | --------------------------------------------------------------------------------- | -------------------------------------- |
+| 1   | `Player создаётся с 4 фишками`                                                    | chips.length === 4                     |
+| 2   | `Player.baseBoard.cells[0] имеет size=4`                                          | В базе 4 места                         |
+| 3   | `Player.homeBoard.cells.length === 8`                                             | Финишная дорожка из 8 ячеек            |
+| 4   | `Player.homeBoard.cells[7] имеет size=4`                                          | Последняя ячейка — 4 места             |
+| 5   | `Player.i_begin вычисляется правильно`                                            | ind=0→4, ind=1→21, ind=2→38, ind=3→55  |
+| 6   | `Player.i_end вычисляется правильно`                                              | ind=0→67, ind=1→16, ind=2→33, ind=3→50 |
+| 7   | `Player.color соответствует переданному`                                          |                                        |
+| 8   | `Player.ai соответствует переданному`                                             |                                        |
+| 9   | `Player.getClosestToFinishChip()` возвращает null, если все finished`             |                                        |
+| 10  | `Player.getClosestToFinishChip()` возвращает фишку на homeBoard`                  | Приоритет home > main > base           |
+| 11  | `Player.getClosestToFinishChip()` возвращает фишку на mainBoard`                  | Если нет на home                       |
+| 12  | `Player.getClosestToFinishChip()` возвращает фишку на base`                       | Если только на base                    |
+| 13  | `Player.getChipProximityScore()` home: 1000 + index`                              |                                        |
+| 14  | `Player.getChipProximityScore()` base: 0`                                         |                                        |
+| 15  | `Player.getChipProximityScore()` main: 100 + (total - distance)`                  |                                        |
+| 16  | **Крайний случай:** `Player.getClosestToFinishChip()` пропускает finished фишки`  |                                        |
+| 17  | **Крайний случай:** `Player.getClosestToFinishChip()` при chip.cell === null`     | Пропускает                             |
+| 18  | **Крайний случай:** `Player.getChipProximityScore()` при отсутствии entranceCell` | Возвращает 0                           |
+
+---
+
+## 4. Тесты для `src/stores/` (Pinia stores)
+
+### 4.1 `dice.test.ts` — Кости
+
+| #   | Тест                                                            | Описание                                  |
+| --- | --------------------------------------------------------------- | ----------------------------------------- |
+| 1   | `roll()` генерирует 2 значения от 1 до 6`                       | items.length === 2, каждый 1-6            |
+| 2   | `reset()` очищает items и used`                                 |                                           |
+| 3   | `sum` — сумма двух костей`                                      |                                           |
+| 4   | `isEquals` — true при дубле`                                    | [3,3] → true, [3,4] → false               |
+| 5   | `isEquals` — false при пустом массиве`                          |                                           |
+| 6   | `hasStart` — true если есть 6`                                  |                                           |
+| 7   | `hasAddon` — true если есть 6`                                  |                                           |
+| 8   | `hasOut` — true если есть 5 или сумма 5`                        | [5,3] → true, [2,3] → true, [1,4] → false |
+| 9   | `isOut(5)` — true`                                              |                                           |
+| 10  | `isOut(4)` — false`                                             |                                           |
+| 11  | `use(item)` — добавляет в used`                                 |                                           |
+| 12  | `use(item)` — не добавляет если нет в unused`                   |                                           |
+| 13  | `use(unusedSum)` — использует сумму`                            | [3,4] → use(7) → used=[3,4]               |
+| 14  | `unused` — разница items и used`                                |                                           |
+| 15  | `isAllUsed` — undefined если used пуст`                         |                                           |
+| 16  | `isAllUsed` — true если все использованы`                       |                                           |
+| 17  | `isAllUsed` — false если не все`                                |                                           |
+| 18  | `rolled` — false после reset`                                   |                                           |
+| 19  | `rolled` — true после roll`                                     |                                           |
+| 20  | **Крайний случай:** `diffByCount` удаляет одно вхождение`       | [3,3,4] - [3] → [3,4]                     |
+| 21  | **Крайний случай:** `diffByCount` удаляет несколько вхождений`  | [3,3,4] - [3,3] → [4]                     |
+| 22  | **Крайний случай:** `diffByCount` пустой результат`             | [3,3] - [3,3] → []                        |
+| 23  | **Крайний случай:** `use()` с одинаковыми значениями на костях` | [3,3] → use(3) → used=[3], unused=[3]     |
+
+### 4.2 `player.test.ts` — Store игроков
+
+| #   | Тест                                                     | Описание            |
+| --- | -------------------------------------------------------- | ------------------- |
+| 1   | `players.length === 4`                                   | 4 игрока            |
+| 2   | `players[0].ai === false`                                | Жёлтый — человек    |
+| 3   | `players[1-3].ai === true`                               | Остальные — ИИ      |
+| 4   | `currentIndex === undefined до init()`                   |                     |
+| 5   | `init()` устанавливает currentIndex`                     |                     |
+| 6   | `init(2)` устанавливает currentIndex=2`                  |                     |
+| 7   | `next()` переключает на следующего`                      | 0→1→2→3→0           |
+| 8   | `current` — текущий игрок`                               |                     |
+| 9   | `current` — undefined если не инициализирован`           |                     |
+| 10  | `allChipsOnBase` — true если все фишки на базе`          |                     |
+| 11  | `allChipsOnBase` — false если не все`                    |                     |
+| 12  | `allChipsOnBase` — undefined если не инициализирован`    |                     |
+| 13  | `checkWinner()` — false если не все фишки finished`      |                     |
+| 14  | `checkWinner()` — возвращает player если все finished`   |                     |
+| 15  | `checkWinner()` — true если уже в winners`               |                     |
+| 16  | `winners` — пустой массив после init()`                  |                     |
+| 17  | **Крайний случай:** `next()` при currentIndex=3 → 0`     | Циклический переход |
+| 18  | **Крайний случай:** `checkWinner()` добавляет в winners` |                     |
+
+### 4.3 `board.test.ts` — Store доски
+
+| #   | Тест                                             | Описание                          |
+| --- | ------------------------------------------------ | --------------------------------- |
+| 1   | `board.cells.length === 68`                      | Основная доска                    |
+| 2   | `board.type === BoardType.main`                  |                                   |
+| 3   | `finishBoards.length === 4`                      | 4 финишные доски                  |
+| 4   | `safes[4] === players[0]`                        | Стартовая жёлтого                 |
+| 5   | `safes[21] === players[1]`                       | Стартовая синего                  |
+| 6   | `safes[38] === players[2]`                       | Стартовая красного                |
+| 7   | `safes[55] === players[3]`                       | Стартовая зелёного                |
+| 8   | `ios[67] === players[0].homeBoard.cells[0]`      | Вход на финиш жёлтого             |
+| 9   | `ios[16] === players[1].homeBoard.cells[0]`      | Вход на финиш синего              |
+| 10  | `ios[33] === players[2].homeBoard.cells[0]`      | Вход на финиш красного            |
+| 11  | `ios[50] === players[3].homeBoard.cells[0]`      | Вход на финиш зелёного            |
+| 12  | `baseBoard.cells[0].io === board.cells[i_begin]` | Выход из базы на стартовую ячейку |
+| 13  | `homeBoard.cells[0].io === board.cells[i_end]`   | Вход на финиш с общей дорожки     |
+
+### 4.4 `game.test.ts` — Store игры (самый важный)
+
+#### 4.4.1 Инициализация
+
+| #   | Тест                                             | Описание |
+| --- | ------------------------------------------------ | -------- |
+| 1   | `initGame()` устанавливает stateId=SELECT_FIRST` |          |
+| 2   | `initGame()` сбрасывает dice`                    |          |
+| 3   | `initGame()` сбрасывает doublesCount`            |          |
+| 4   | `initGame()` сбрасывает firstRollResults`        |          |
+
+#### 4.4.2 Выбор первого игрока (SELECT_FIRST)
+
+| #   | Тест                                                                       | Описание |
+| --- | -------------------------------------------------------------------------- | -------- |
+| 5   | `rollDice()` в SELECT_FIRST вызывает handleSelectFirstRoll`                |          |
+| 6   | `handleSelectFirstRoll()` сохраняет результат броска`                      |          |
+| 7   | `handleSelectFirstRoll()` переключает на следующего игрока`                |          |
+| 8   | `selectFirstPlayer()` выбирает игрока с минимальным броском`               |          |
+| 9   | `selectFirstPlayer()` при ничье — перебрасывают только кандидаты`          |          |
+| 10  | `selectFirstPlayer()` переходит в WAIT_ROLL`                               |          |
+| 11  | **Крайний случай:** все 4 игрока выбросили одинаково — переброс всех`      |          |
+| 12  | **Крайний случай:** 2 игрока выбросили минимум — перебрасывают только они` |          |
+
+#### 4.4.3 Бросок костей и дубли
+
+| #   | Тест                                                                    | Описание  |
+| --- | ----------------------------------------------------------------------- | --------- |
+| 13  | `rollDice()` в WAIT_ROLL обновляет dice`                                |           |
+| 14  | `rollDice()` при дубле увеличивает doublesCount`                        |           |
+| 15  | `rollDice()` при 3 дублях подряд — handleThreeDoubles`                  |           |
+| 16  | `handleThreeDoubles()` отправляет ближайшую фишку на базу`              |           |
+| 17  | `rollDice()` при дубле и hasMovableChips → WAIT_STEP`                   |           |
+| 18  | `rollDice()` при дубле и !hasMovableChips → WAIT_ROLL`                  |           |
+| 19  | `rollDice()` без дубля и hasMovableChips → WAIT_STEP`                   |           |
+| 20  | `rollDice()` без дубля и !hasMovableChips → WAIT_PLAYER`                |           |
+| 21  | **Крайний случай:** 3 дубля подряд, но нет фишек для отправки`          | Не падает |
+| 22  | **Крайний случай:** дубль, но все фишки на базе и выпало 6 → WAIT_ROLL` |           |
+
+#### 4.4.4 Доступные ходы (getAvailableSteps, getMovableChips)
+
+| #   | Тест                                                                 | Описание                                   |
+| --- | -------------------------------------------------------------------- | ------------------------------------------ |
+| 23  | `getAvailableSteps()` возвращает unused кубики`                      |                                            |
+| 24  | `getAvailableSteps()` включает сумму если оба не использованы`       |                                            |
+| 25  | `getAvailableSteps()` включает бонусы`                               |                                            |
+| 26  | `getAvailableSteps()` пустой если нет кубиков`                       |                                            |
+| 27  | `getMovableChips()` возвращает фишки, которые могут ходить`          |                                            |
+| 28  | `getMovableChips()` не дублирует фишки`                              |                                            |
+| 29  | `getPossibleStepsForChip()` возвращает шаги для фишки`               |                                            |
+| 30  | **Крайний случай:** `getAvailableSteps()` сумма совпадает с кубиком` | [3,4] → unused=[3,4], sum=7, steps=[3,4,7] |
+| 31  | **Крайний случай:** `getAvailableSteps()` с бонусом 10`              | steps=[3,4,7,10]                           |
+
+#### 4.4.5 Движение по доске (findTargetCellVariants)
+
+| #   | Тест                                                                               | Описание |
+| --- | ---------------------------------------------------------------------------------- | -------- |
+| 32  | `findTargetCellVariants()` из base с steps=5 → выходная ячейка`                    |          |
+| 33  | `findTargetCellVariants()` из base с steps≠5 → пусто`                              |          |
+| 34  | `findTargetCellVariants()` из base когда выход заблокирован → пусто`               |          |
+| 35  | `findTargetCellVariants()` из base когда выход занят своей фишкой → пусто`         |          |
+| 36  | `findTargetCellVariants()` по main доске — обычное движение`                       |          |
+| 37  | `findTargetCellVariants()` по main — остановка на безопасной чужой ячейке → пусто` |          |
+| 38  | `findTargetCellVariants()` по main — проход через блок → пусто`                    |          |
+| 39  | `findTargetCellVariants()` по main — поворот на home`                              |          |
+| 40  | `findTargetCellVariants()` по home — движение внутри`                              |          |
+| 41  | `findTargetCellVariants()` по home — выход за пределы → пусто`                     |          |
+| 42  | `findTargetCellVariants()` по home — блок на пути → пусто`                         |          |
+| 43  | `findTargetCellVariants()` с точки входа на home`                                  |          |
+| 44  | **Крайний случай:** движение через всю доску (зацикливание)`                       |          |
+| 45  | **Крайний случай:** steps=0 → пусто или текущая ячейка`                            |          |
+| 46  | **Крайний случай:** steps > totalCells — корректный modulo`                        |          |
+
+#### 4.4.6 Перемещение фишки (moveChip)
+
+| #   | Тест                                                                | Описание |
+| --- | ------------------------------------------------------------------- | -------- |
+| 47  | `moveChip()` использует соответствующий кубик`                      |          |
+| 48  | `moveChip()` использует бонусный шаг`                               |          |
+| 49  | `moveChip()` захватывает чужую фишку → sendToStart + bonus 20`      |          |
+| 50  | `moveChip()` попадание в последнюю ячейку home → finish + bonus 10` |          |
+| 51  | `moveChip()` после хода с доступными ходами → WAIT_STEP`            |          |
+| 52  | `moveChip()` после хода с дублем → WAIT_ROLL`                       |          |
+| 53  | `moveChip()` после хода с 6 → WAIT_ROLL`                            |          |
+| 54  | `moveChip()` после хода без доп. ходов → WAIT_PLAYER`               |          |
+| 55  | `moveChip()` с недоступным steps → false`                           |          |
+| 56  | **Крайний случай:** захват нескольких фишек на одной ячейке`        |          |
+| 57  | **Крайний случай:** захват на безопасной ячейке — не происходит`    |          |
+| 58  | **Крайний случай:** финиш не в последнюю ячейку — без бонуса`       |          |
+
+#### 4.4.7 Проверки безопасности и блоков
+
+| #   | Тест                                                        | Описание |
+| --- | ----------------------------------------------------------- | -------- |
+| 59  | `isSafeCell()` с safe=true → true`                          |          |
+| 60  | `isSafeCell()` с safe=PlayerData для своего игрока → true`  |          |
+| 61  | `isSafeCell()` с safe=PlayerData для чужого игрока → false` |          |
+| 62  | `isSafeCell()` с safe=false → false`                        |          |
+| 63  | `isCellBlocked()` все места заняты → true`                  |          |
+| 64  | `isCellBlocked()` не все места заняты → false`              |          |
+| 65  | `isCellDisabled()` ячейка свободна → false`                 |          |
+| 66  | `isCellDisabled()` занята безопасная для владельца → true`  |          |
+| 67  | `isCellDisabled()` занята небезопасная → false`             |          |
+
+#### 4.4.8 sendToStart
+
+| #   | Тест                                                       | Описание |
+| --- | ---------------------------------------------------------- | -------- |
+| 68  | `sendToStart()` отправляет фишку на baseBoard.cells[0]`    |          |
+| 69  | `sendToStart()` освобождает старую ячейку`                 |          |
+| 70  | **Крайний случай:** `sendToStart()` для фишки уже на базе` |          |
+
+#### 4.4.9 Проверка победителя
+
+| #   | Тест                                               | Описание |
+| --- | -------------------------------------------------- | -------- |
+| 71  | `checkWinner()` при всех finished → FINISH`        |          |
+| 72  | `checkWinner()` не при всех finished → ничего`     |          |
+| 73  | **Крайний случай:** `checkWinner()` для ИИ-игрока` |          |
+
+#### 4.4.10 onChipClick
+
+| #   | Тест                                                               | Описание |
+| --- | ------------------------------------------------------------------ | -------- |
+| 74  | `onChipClick()` в SELECT_FIRST — игнорируется`                     |          |
+| 75  | `onChipClick()` с доступной фишкой — selectedChip устанавливается` |          |
+| 76  | `onChipClick()` с недоступной фишкой — игнорируется`               |          |
+| 77  | `onChipClick()` с null — игнорируется`                             |          |
+
+---
+
+## 5. Тесты для `src/utils/`
+
+### 5.1 `array.test.ts`
+
+| #   | Тест                             | Описание |
+| --- | -------------------------------- | -------- |
+| 1   | `firstElement([1,2,3]) === 1`    |          |
+| 2   | `firstElement([]) === undefined` |          |
+| 3   | `lastElement([1,2,3]) === 3`     |          |
+| 4   | `lastElement([]) === undefined`  |          |
+
+---
+
+## 6. Интеграционные тесты (опционально)
+
+| #   | Тест                                                                                          | Описание |
+| --- | --------------------------------------------------------------------------------------------- | -------- |
+| 1   | Полный игровой цикл: init → SELECT_FIRST → броски → выбор первого → WAIT_ROLL → ходы → FINISH |          |
+| 2   | Игрок выбивает фишку противника → бонус 20 → использует бонус                                 |          |
+| 3   | Три дубля подряд → ближайшая фишка на базу                                                    |          |
+| 4   | Блокада: две фишки одного цвета → никто не может пройти                                       |          |
+| 5   | Все фишки на базе, выпало 6 → дополнительный бросок                                           |          |
+
+---
+
+## 7. Настройка Vitest
+
+### vitest.config.ts
+
+```typescript
+import { defineConfig } from 'vitest/config';
+import vue from '@vitejs/plugin-vue';
+import { quasar, transformAssetUrls } from '@quasar/vite-plugin';
+
+export default defineConfig({
+  plugins: [vue({ template: { transformAssetUrls } }), quasar()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    include: ['src/**/*.test.ts'],
+    setupFiles: ['src/test-setup.ts'],
+  },
+  resolve: {
+    alias: {
+      src: '/src',
+    },
+  },
+});
+```
+
+### src/test-setup.ts
+
+```typescript
+import { config } from '@vue/test-utils';
+// Глобальная настройка для тестов
+```
+
+### package.json scripts
+
+```json
+{
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  }
+}
+```
+
+---
+
+## 8. Приоритет выполнения
+
+1. **Установка Vitest** и настройка окружения
+2. **Тесты для `src/lib/`** — чистая логика, не требует Pinia/Vue
+3. **Тесты для `src/utils/`** — простые утилиты
+4. **Тесты для `src/stores/dice.ts`** — изолированный store
+5. **Тесты для `src/stores/player.ts`** — зависит только от lib
+6. **Тесты для `src/stores/board.ts`** — зависит от player
+7. **Тесты для `src/stores/game.ts`** — самый сложный, зависит от всех
+8. **Интеграционные тесты** — полные сценарии игры

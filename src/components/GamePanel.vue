@@ -49,21 +49,7 @@
       </button>
       <span class="q-ml-md">
         <template v-if="diceStore.rolled">
-          <input
-            v-if="diceStore.items[0] !== undefined"
-            type="number"
-            min="1"
-            max="6"
-            v-model="diceStore.items[0]"
-          />
-          <input
-            v-if="diceStore.items[1] !== undefined"
-            type="number"
-            min="1"
-            max="6"
-            v-model="diceStore.items[1]"
-          />
-          <!--{{ diceStore.items.join(' + ') }} = -->{{ diceStore.sum }}
+          {{ diceStore.items.join(' + ') }} = {{ diceStore.sum }}
           <span v-if="diceStore.used.length > 0"> (использовано: {{ usedDiceText }})</span>
           <span v-if="gameStore.currentBonusSteps.length > 0" class="q-ml-md" style="color: green">
             Бонусы доступны: {{ gameStore.currentBonusSteps.map((s) => `+${s}`).join(', ') }}
@@ -122,6 +108,9 @@
     <strong>Нет доступных шагов.</strong>
     <button @click="gameStore.nextPlayer">Завершить ход</button>
   </div>
+
+  <!-- Debug Panel -->
+  <DebugPanel />
 </template>
 
 <script setup lang="ts">
@@ -131,6 +120,7 @@ import { useDiceStore } from 'src/stores/dice';
 import { useGameStore } from 'src/stores/game';
 import { usePlayerStore } from 'src/stores/player';
 import { computed } from 'vue';
+import DebugPanel from './DebugPanel.vue';
 
 const gameStore = useGameStore();
 const diceStore = useDiceStore();
