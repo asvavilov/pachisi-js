@@ -203,13 +203,13 @@ export const useGameStore = defineStore('game', () => {
     const results = firstRollResults.value;
     const values = [results[0], results[1], results[2], results[3]];
 
-    // Находим минимальное значение
-    const minVal = Math.min(...values);
+    // README п.2: начинает тот, у кого наибольшая сумма; при равенстве — переброс.
+    const maxVal = Math.max(...values);
 
-    // Находим всех игроков с минимальным значением
+    // Находим всех игроков с максимальным значением
     const candidates: PlayerIndex[] = [];
     for (let i = 0; i < 4; i++) {
-      if (values[i] === minVal) {
+      if (values[i] === maxVal) {
         candidates.push(i as PlayerIndex);
       }
     }
@@ -227,12 +227,12 @@ export const useGameStore = defineStore('game', () => {
         { winner, values },
       );
     } else {
-      // Ничья — перебрасываются только игроки с минимальным значением
+      // Ничья — перебрасываются только игроки с максимальным значением
       debugLogPush(
         'selectFirstPlayer',
-        `Ничья между игроками [${candidates.join(', ')}] со значением ${minVal}, переброс`,
+        `Ничья между игроками [${candidates.join(', ')}] со значением ${maxVal}, переброс`,
         'warning',
-        { candidates, minVal },
+        { candidates, maxVal },
       );
       firstRollResults.value = { 0: 0, 1: 0, 2: 0, 3: 0 };
       firstRollPlayerIndex.value = candidates[0]!;
@@ -799,5 +799,20 @@ export const useGameStore = defineStore('game', () => {
     debug,
     debugLogPush,
     clearDebugLog,
+    // Внутренние функции, экспортированные для тестирования
+    handleSelectFirstRoll,
+    selectFirstPlayer,
+    handleThreeDoubles,
+    getAvailableSteps,
+    getMovableChips,
+    getMovableChipsForSteps,
+    canMoveChip,
+    isSafeCell,
+    isCellBlocked,
+    isCellDisabled,
+    sendToStart,
+    addBonus,
+    checkWinner,
+    canAddonRollDice,
   };
 });

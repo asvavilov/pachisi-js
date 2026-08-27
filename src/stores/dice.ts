@@ -6,8 +6,6 @@ import { computed, ref } from 'vue';
  */
 export const useDiceStore = defineStore('dice', () => {
   const count: number = 2;
-  const startItem: number = 6;
-  const addonItem: number = 6;
   const outItem: number = 5;
 
   const items = ref<number[]>([]);
@@ -69,13 +67,14 @@ export const useDiceStore = defineStore('dice', () => {
     used.value = [];
   };
 
-  const hasStart = computed(() => items.value.some((item) => item === startItem));
+  // README п.4: выход с базы — по сумме двух кубиков, равной 5 (а не по «6»).
+  const hasStart = computed(() => sum.value === outItem);
 
-  const hasAddon = computed(() => items.value.some((item) => item === addonItem));
+  // README п.7 + адаптация: дополнительный бросок даёт дубль (а не «6»).
+  const hasAddon = computed(() => isEquals.value);
 
-  const hasOut = computed(
-    () => items.value.some((item) => item === outItem) || sum.value === outItem,
-  );
+  // README п.4: выход возможен, когда сумма двух кубиков равна 5.
+  const hasOut = computed(() => sum.value === outItem);
 
   const isOut = (steps: number) => steps === outItem;
 
