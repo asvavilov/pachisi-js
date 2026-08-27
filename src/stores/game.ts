@@ -108,6 +108,17 @@ export const useGameStore = defineStore('game', () => {
   const doublesCount = ref(0);
 
   /**
+   * README п.7: использовал ли игрок второй дубль для хода.
+   * Третий дубль отправляет фишку в базу только если второй дубль был использован для хода.
+   */
+  const secondDoubleUsedForMove = ref(false);
+
+  /**
+   * README п.7: последняя двинутая фишка (для правила трёх дублей).
+   */
+  const lastMovedChip = ref<Chip | null>(null);
+
+  /**
    * Инициализация начала игры.
    */
   const initGame = () => {
@@ -117,6 +128,8 @@ export const useGameStore = defineStore('game', () => {
     firstRollResults.value = { 0: 0, 1: 0, 2: 0, 3: 0 };
     firstRollCandidates.value = [0, 1, 2, 3];
     doublesCount.value = 0;
+    secondDoubleUsedForMove.value = false;
+    lastMovedChip.value = null;
     currentIndex.value = 0;
     stateId.value = GameStateEnum.SELECT_FIRST;
     clearDebugLog();
@@ -146,12 +159,22 @@ export const useGameStore = defineStore('game', () => {
       debugLogPush('rollDice', `Дубль! Счётчик: ${doublesCount.value}/3`, 'warning', {
         doublesCount: doublesCount.value,
       });
+      // README п.7: третий дубль срабатывает только если второй дубль был использован для хода.
+      if (doublesCount.value === 2) {
+        // Выпал второй дубль — сбрасываем флаг использования его для хода
+        secondDoubleUsedForMove.value = false;
+        lastMovedChip.value = null;
+      }
       if (doublesCount.value >= 3) {
         handleThreeDoubles();
         doublesCount.value = 0;
+        secondDoubleUsedForMove.value = false;
+        lastMovedChip.value = null;
       }
     } else {
       doublesCount.value = 0;
+      secondDoubleUsedForMove.value = false;
+      lastMovedChip.value = null;
     }
 
     if (hasMovableChips.value) {
@@ -259,7 +282,18 @@ export const useGameStore = defineStore('game', () => {
       return;
     }
 
-    const chip = player.getClosestToFinishChip();
+    // README п.7: третий дубль отправляет фишку в базу только если второй дубль был использован для хода.
+    if (!secondDoubleUsedForMove.value) {
+      debugLogPush(
+        'handleThreeDoubles',
+        '3 дубля подряд, но второй дубль не был использован для хода — фишка не отправляется на базу',
+        'warning',
+      );
+      return;
+    }
+
+    // README п.7: отправляем последнюю двинутую фишку (если она есть), иначе ближайшую к финишу.
+    const chip = lastMovedChip.value ?? player.getClosestToFinishChip();
     if (chip) {
       debugLogPush(
         'handleThreeDoubles',
@@ -697,6 +731,12 @@ export const useGameStore = defineStore('game', () => {
     // Выполняем перемещение
     chip.go(target);
     selectedChip.value = null;
+
+    // README п.7: фиксируем использование дубля для хода (для правила трёх дублей).
+    if (doublesCount.value >= 2) {
+      secondDoubleUsedForMove.value = true;
+      lastMovedChip.value = chip;
+    }
 
     stateId.value = hasMovableChips.value
       ? GameStateEnum.WAIT_STEP

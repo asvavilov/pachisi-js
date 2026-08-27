@@ -273,9 +273,41 @@ describe('game store', () => {
       expect(game.stateId).toBe(GameStateEnum.WAIT_ROLL);
     });
 
-    it.todo(
-      '3 дубля подряд, но второй НЕ использован для хода → фишка в базу НЕ отправляется (README п.7)',
-    );
+    it('Крайний случай: 3 дубля подряд, но второй НЕ использован для хода → фишка в базу НЕ отправляется (README п.7)', () => {
+      const { game, playerStore, boardStore } = setupGame();
+      game.stateId = GameStateEnum.WAIT_ROLL;
+      playerStore.init(0);
+      const chip = putOnMain(playerStore.players[0]!, boardStore.board, 0, 10);
+
+      // Первый дубль → используется для хода (не считается как «второй дубль»)
+      vi.restoreAllMocks();
+      mockRoll(3, 3);
+      game.rollDice();
+      expect(game.doublesCount).toBe(1);
+      game.moveChip(chip, 3, boardStore.board.cells[13]!);
+      const posAfterFirstMove = chip.cell;
+
+      // Второй дубль выпал, но НЕ используется для хода
+      vi.restoreAllMocks();
+      mockRoll(3, 3);
+      game.rollDice();
+      expect(game.doublesCount).toBe(2);
+
+      // Третий дубль: т.к. второй не был использован для хода, фишка в базу НЕ отправляется (README п.7)
+      vi.restoreAllMocks();
+      mockRoll(3, 3);
+      game.rollDice();
+      expect(game.doublesCount).toBe(0);
+      expect(chip.cell).toBe(posAfterFirstMove);
+      expect(chip.cell).not.toBe(playerStore.players[0]!.baseBoard.cells[0]);
+      expect(
+        game.debug.log.some(
+          (e: { function: string; message: string }) =>
+            e.function === 'handleThreeDoubles' &&
+            e.message.includes('не был использован для хода'),
+        ),
+      ).toBe(true);
+    });
   });
 
   // =================================================================
