@@ -96,6 +96,11 @@ export const useGameStore = defineStore('game', () => {
    * Результаты бросков на этапе выбора первого игрока
    */
   const firstRollResults = ref<Record<PlayerIndex, number>>({ 0: 0, 1: 0, 2: 0, 3: 0 });
+  /**
+   * Кандидаты на бросок/переброс на этапе выбора первого игрока.
+   * Изначально — все 4 игрока; при ничье сужается до игроков с максимальной суммой.
+   */
+  const firstRollCandidates = ref<PlayerIndex[]>([0, 1, 2, 3]);
 
   /**
    * Счётчик дублей подряд
@@ -110,6 +115,7 @@ export const useGameStore = defineStore('game', () => {
     diceStore.reset();
     firstRollPlayerIndex.value = 0;
     firstRollResults.value = { 0: 0, 1: 0, 2: 0, 3: 0 };
+    firstRollCandidates.value = [0, 1, 2, 3];
     doublesCount.value = 0;
     currentIndex.value = 0;
     stateId.value = GameStateEnum.SELECT_FIRST;
@@ -169,7 +175,9 @@ export const useGameStore = defineStore('game', () => {
   };
 
   /**
-   * 1.1 Обработка броска на этапе выбора первого игрока
+   * 1.1 Обработка броска на этапе выбора первого игрока.
+   * Бросают только текущие кандидаты (firstRollCandidates):
+   * при ничьей на предыдущем круге — только игроки с максимальной суммой.
    */
   const handleSelectFirstRoll = () => {
     const idx = firstRollPlayerIndex.value;
@@ -184,11 +192,13 @@ export const useGameStore = defineStore('game', () => {
     // Обновляем текущего игрока для отображения
     currentIndex.value = idx;
 
-    // Переход к следующему игроку
-    const nextIdx = ((idx + 1) % 4) as PlayerIndex;
+    // Переход к следующему кандидату на бросок
+    const candidates = firstRollCandidates.value;
+    const curPos = candidates.indexOf(idx);
+    const nextIdx = candidates[(curPos + 1) % candidates.length]!;
 
-    // Если все 4 игрока бросили
-    if (nextIdx === 0) {
+    // Если вернулись к первому кандидату — все кандидаты бросили
+    if (nextIdx === candidates[0]) {
       selectFirstPlayer();
     } else {
       firstRollPlayerIndex.value = nextIdx;
@@ -197,45 +207,44 @@ export const useGameStore = defineStore('game', () => {
   };
 
   /**
-   * 1.1 Выбор первого игрока по минимальному броску
+   * 1.1 Выбор первого игрока по наибольшему броску (README п.2).
+   * При равенстве максимальной суммы — перебрасывают только игроки с этим максимумом.
    */
   const selectFirstPlayer = () => {
     const results = firstRollResults.value;
-    const values = [results[0], results[1], results[2], results[3]];
+    const candidates = firstRollCandidates.value;
 
     // README п.2: начинает тот, у кого наибольшая сумма; при равенстве — переброс.
-    const maxVal = Math.max(...values);
+    const candidateValues = candidates.map((c) => results[c]);
+    const maxVal = Math.max(...candidateValues);
 
-    // Находим всех игроков с максимальным значением
-    const candidates: PlayerIndex[] = [];
-    for (let i = 0; i < 4; i++) {
-      if (values[i] === maxVal) {
-        candidates.push(i as PlayerIndex);
-      }
-    }
+    // Находим всех кандидатов с максимальным значением
+    const tieCandidates: PlayerIndex[] = candidates.filter((c) => results[c] === maxVal);
 
-    if (candidates.length === 1) {
+    if (tieCandidates.length === 1) {
       // Один победитель — устанавливаем его первым
-      const winner = candidates[0]!;
+      const winner = tieCandidates[0]!;
       playerStore.init(winner);
       doublesCount.value = 0;
+      firstRollCandidates.value = [0, 1, 2, 3];
       stateId.value = GameStateEnum.WAIT_ROLL;
       debugLogPush(
         'selectFirstPlayer',
-        `Первый игрок: ${winner} (${playerStore.players[winner]?.color}), результаты: [${values.join(', ')}]`,
+        `Первый игрок: ${winner} (${playerStore.players[winner]?.color}), результаты: [${Object.values(results).join(', ')}]`,
         'success',
-        { winner, values },
+        { winner, values: Object.values(results) },
       );
     } else {
       // Ничья — перебрасываются только игроки с максимальным значением
       debugLogPush(
         'selectFirstPlayer',
-        `Ничья между игроками [${candidates.join(', ')}] со значением ${maxVal}, переброс`,
+        `Ничья между игроками [${tieCandidates.join(', ')}] со значением ${maxVal}, переброс`,
         'warning',
-        { candidates, maxVal },
+        { candidates: tieCandidates, maxVal },
       );
       firstRollResults.value = { 0: 0, 1: 0, 2: 0, 3: 0 };
-      firstRollPlayerIndex.value = candidates[0]!;
+      firstRollCandidates.value = tieCandidates;
+      firstRollPlayerIndex.value = tieCandidates[0]!;
       // Состояние остаётся SELECT_FIRST
     }
   };
@@ -793,6 +802,7 @@ export const useGameStore = defineStore('game', () => {
     // 1.1 Этап выбора первого игрока
     firstRollPlayerIndex,
     firstRollResults,
+    firstRollCandidates,
     // 1.3 Счётчик дублей
     doublesCount,
     // Debug

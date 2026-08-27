@@ -125,10 +125,54 @@ describe('game store', () => {
       expect(game.firstRollPlayerIndex).toBe(0);
     });
 
-    it.todo(
-      'при ничье — перебрасывают только кандидатов (требует доработки handleSelectFirstRoll)',
-    );
-    it.todo('2 игрока выбросили максимум — перебрасывают только их');
+    it('при ничье — перебрасывают только кандидатов', () => {
+      const { game, playerStore, diceStore } = setupGame();
+      // После первого круга ничья между игроками 1 и 2
+      game.firstRollResults = { 0: 5, 1: 7, 2: 7, 3: 4 };
+      game.selectFirstPlayer();
+      expect(game.stateId).toBe(GameStateEnum.SELECT_FIRST);
+      expect(game.firstRollCandidates).toEqual([1, 2]);
+      expect(game.firstRollPlayerIndex).toBe(1);
+
+      // Игрок 1 перебрасывает (сумма 8)
+      diceStore.items = [5, 3];
+      game.handleSelectFirstRoll();
+      expect(game.firstRollResults[1]).toBe(8);
+      // Следующий — игрок 2 (не 0 и не 3)
+      expect(game.firstRollPlayerIndex).toBe(2);
+
+      // Игрок 2 перебрасывает (сумма 3)
+      diceStore.items = [1, 2];
+      game.handleSelectFirstRoll();
+      expect(game.firstRollResults[2]).toBe(3);
+      // Победитель — игрок 1
+      expect(playerStore.currentIndex).toBe(1);
+      expect(game.stateId).toBe(GameStateEnum.WAIT_ROLL);
+    });
+
+    it('2 игрока выбросили максимум — перебрасывают только их', () => {
+      const { game, playerStore, diceStore } = setupGame();
+      game.firstRollResults = { 0: 4, 1: 7, 2: 7, 3: 3 };
+      game.selectFirstPlayer();
+      expect(game.stateId).toBe(GameStateEnum.SELECT_FIRST);
+      // Перебрасывают только игроков 1 и 2
+      expect(game.firstRollCandidates).toEqual([1, 2]);
+      expect(game.firstRollPlayerIndex).toBe(1);
+
+      // Игрок 1 перебрасывает (сумма 9)
+      diceStore.items = [4, 5];
+      game.handleSelectFirstRoll();
+      expect(game.firstRollResults[1]).toBe(9);
+      // Следующий — игрок 2, а не 0/3
+      expect(game.firstRollPlayerIndex).toBe(2);
+
+      // Игрок 2 перебрасывает (сумма 4)
+      diceStore.items = [2, 2];
+      game.handleSelectFirstRoll();
+      // Победитель — игрок 1
+      expect(playerStore.currentIndex).toBe(1);
+      expect(game.stateId).toBe(GameStateEnum.WAIT_ROLL);
+    });
   });
 
   // =================================================================
