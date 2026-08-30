@@ -757,10 +757,20 @@ describe('game store', () => {
       expect(game.isCellDisabled(boardStore.board.cells[5]!)).toBe(false);
     });
 
-    it.todo(
-      'чужая стартовая клетка, занятая владельцем, для чужака → false (README п.9 — требуется доработка isCellDisabled)',
-    );
-    it.todo('общая безопасная клетка, занятая одним цветом → false (README п.9)');
+    it('isCellDisabled() чужая стартовая клетка, занятая владельцем, для чужака → false (README п.9)', () => {
+      const { game, playerStore, boardStore } = setupGame();
+      // Текущий игрок — чужак (1), стартовая клетка принадлежит игроку 0 и занята его фишкой
+      playerStore.init(1);
+      putOnMain(playerStore.players[0]!, boardStore.board, 0, 4);
+      expect(game.isCellDisabled(boardStore.board.cells[4]!)).toBe(false);
+    });
+
+    it('isCellDisabled() общая безопасная клетка (safe=true), занятая одним цветом → false (README п.9)', () => {
+      const { game, playerStore, boardStore } = setupGame();
+      playerStore.init(0);
+      putOnMain(playerStore.players[0]!, boardStore.board, 0, 11);
+      expect(game.isCellDisabled(boardStore.board.cells[11]!)).toBe(false);
+    });
   });
 
   // =================================================================

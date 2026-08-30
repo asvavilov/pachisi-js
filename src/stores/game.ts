@@ -673,15 +673,26 @@ export const useGameStore = defineStore('game', () => {
   };
 
   const isCellDisabled = (cell: Cell): boolean => {
-    // Ячейка считается отключенной, если она занята и является безопасной для игрока, который её занимает
+    // Ячейка «отключена» (нельзя встать) только для СВОЕГО игрока, когда её занимает
+    // его же фишка на собственной стартовой клетке.
+    // README п.9: на стартовых и безопасных клетках могут стоять фишки разных цветов,
+    // поэтому для чужака (и на общей безопасной клетке) ячейка НЕ отключена —
+    // можно встать, если есть место.
+    const mover = playerStore.current;
+    if (!mover) {
+      return false; // нет ходящего игрока — ячейка не отключена
+    }
     const places = cell.places.filter((p) => p !== null);
     if (places.length === 0) {
       return false; // ячейка свободна - не отключена
     }
     // Все фишки на ячейке принадлежат одному игроку (по правилам игры)
     const occupyingPlayer = places[0]!.player;
-    // Проверяем, безопасна ли ячейка для этого игрока
-    return isSafeCell(cell, occupyingPlayer);
+    // Отключена только своя стартовая клетка (safe = PlayerData своего игрока),
+    // занятая собственной фишкой; общая безопасная клетка (safe === true) не блокирует.
+    return (
+      occupyingPlayer.ind === mover.ind && cell.safe !== true && isSafeCell(cell, occupyingPlayer)
+    );
   };
 
   /**
