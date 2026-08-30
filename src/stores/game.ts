@@ -498,8 +498,9 @@ export const useGameStore = defineStore('game', () => {
       // Выходная ячейка безопасна только для своего цвета.
       // Проверяем, не занята ли ячейка своей же фишкой
       const exitCell = currentCell.io;
-      // Если ячейка заблокирована (две фишки одного цвета) — выход невозможен
-      if (isCellBlocked(exitCell)) {
+      // Если выходная ячейка полностью занята (барьер или мост) — выйти нельзя,
+      // т.к. на мост/барьер нельзя встать (README п.9).
+      if (exitCell.places.every((p) => p !== null)) {
         return variants;
       }
       const player = currentCell.board.player;
@@ -684,11 +685,21 @@ export const useGameStore = defineStore('game', () => {
   };
 
   /**
-   * Проверка, является ли ячейка заблокированной (блок)
-   * Блок образуют:
-   * - фишки одного цвета на любой ячейке заняли все места
+   * Проверка, является ли ячейка заблокированной (барьер).
+   * README п.9: барьер образуют две фишки ОДНОГО цвета на одной клетке — через него
+   * нельзя ни пройти, ни встать. Две фишки РАЗНЫХ цветов образуют «мост» —
+   * через мост можно пройти (но нельзя встать), поэтому он НЕ считается блоком.
    */
-  const isCellBlocked = (cell: Cell): boolean => cell.places.every((p) => p !== null);
+  const isCellBlocked = (cell: Cell): boolean => {
+    const places = cell.places;
+    // Если есть свободные места — это не барьер
+    if (!places.every((p) => p !== null)) {
+      return false;
+    }
+    // Ячейка полностью занята: барьер только при фишках одного цвета
+    const firstColor = places[0]!.player;
+    return places.every((p) => p.player === firstColor);
+  };
 
   /**
    * FIXME тут не надо проверок на возможность хода, они должны быть до вызова этого метода

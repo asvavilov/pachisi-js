@@ -532,7 +532,16 @@ describe('game store', () => {
       expect(variants).toContain(boardStore.board.cells[21]);
     });
 
-    it.todo('проход через мост (2 фишки разных цветов, не барьер) → возможно (README п.9)');
+    it('проход через мост (2 фишки разных цветов, не барьер) → возможно (README п.9)', () => {
+      const { game, playerStore, boardStore } = setupGame();
+      putOnMain(playerStore.players[0]!, boardStore.board, 0, 8);
+      // Мост: две фишки РАЗНЫХ цветов на безопасной клетке 11 (не барьер)
+      putOnMain(playerStore.players[1]!, boardStore.board, 0, 11);
+      putOnMain(playerStore.players[2]!, boardStore.board, 0, 11);
+      // Шаг 5 с клетки 8 → цель 13; клетка 11 — промежуточная (через неё проходит путь)
+      const variants = game.findTargetCellVariants(playerStore.players[0]!.chips[0]!.cell, 5);
+      expect(variants).toContain(boardStore.board.cells[13]);
+    });
     it.todo(
       'из base при всех 4 фишках в базе и сумме 5 → вывод двух фишек (README п.4 — требуется реализация)',
     );
