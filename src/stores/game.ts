@@ -546,8 +546,10 @@ export const useGameStore = defineStore('game', () => {
     const newIdx = (idx + steps) % totalCells;
     const targetCellMain = mainBoard.cells[newIdx]!;
 
-    // Проверка отключенности ячейки: нельзя остановиться на ячейке, которая занята и безопасна для занимающего игрока
-    if (!isCellDisabled(targetCellMain)) {
+    // Проверка отключенности ячейки: нельзя остановиться на ячейке, которая занята и безопасна для занимающего игрока.
+    // README п.5: на остальных (кроме базы и дома) клетках не более двух фишек — нельзя встать на полностью занятую ячейку
+    // (ни на барьер, ни на мост, см. п.8 и п.9).
+    if (!isCellDisabled(targetCellMain) && targetCellMain.places.some((p) => p === null)) {
       // Проверка блокировки пути: нельзя пройти через заблокированную ячейку
       const intermediateCellsMain = getIntermediateCellsOnBoard(currentCell, steps, mainBoard);
       let pathBlocked = false;
@@ -730,6 +732,17 @@ export const useGameStore = defineStore('game', () => {
         steps,
         availableSteps,
       });
+      return false;
+    }
+    // README п.5: на остальных (кроме базы и дома) клетках не более двух фишек.
+    // Нельзя поставить фишку на полностью занятую целевую ячейку (на барьер или мост).
+    if (!targetCell.places.some((p) => p === null)) {
+      debugLogPush(
+        'moveChip',
+        `Нельзя встать на полностью занятую ячейку (README п.5) для фишки #${chip.id}`,
+        'error',
+        { chipId: chip.id, steps, targetBoardType: targetCell.board.type },
+      );
       return false;
     }
     // Определяем, является ли шаг бонусным (10 или 20)

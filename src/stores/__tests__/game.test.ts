@@ -689,7 +689,20 @@ describe('game store', () => {
       // Использован один кубик дубля
       expect(diceStore.used.length).toBe(1);
     });
-    it.todo('третья фишка на клетку с двумя фишками → false (README п.5)');
+    it('третья фишка на клетку с двумя фишками → false (README п.5)', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      playerStore.init(0);
+      // Две фишки текущего игрока уже на клетке 13
+      putOnMain(playerStore.players[0]!, boardStore.board, 0, 13);
+      putOnMain(playerStore.players[0]!, boardStore.board, 1, 13);
+      // Третья фишка ходит с клетки 10 на клетку 13 (шаг 3)
+      const chip = putOnMain(playerStore.players[0]!, boardStore.board, 2, 10);
+      diceStore.items = [3, 4];
+      expect(game.moveChip(chip, 3, boardStore.board.cells[13]!)).toBe(false);
+      // Кубик не потрачен, фишка не перемещена
+      expect(diceStore.used).toEqual([]);
+      expect(chip.cell).toBe(boardStore.board.cells[10]);
+    });
   });
 
   // =================================================================
