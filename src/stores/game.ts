@@ -769,27 +769,50 @@ export const useGameStore = defineStore('game', () => {
     // Если целевая ячейка не указана, используем первый вариант
     const target = targetCell;
 
-    // Проверка на захват: если в целевой ячейке есть фишка другого игрока и ячейка не безопасна для текущей фишки
+    // README п.11: выход с базы на занятую стартовую клетку — «расплющивание»
+    // (сбитые фишки уходят в базу, но бонус +20 не начисляется).
+    const isBaseExit =
+      chip.cell?.board.type === BoardType.base && target.board.type === BoardType.main;
+
+    // Проверка на захват: если в целевой ячейке есть фишка другого игрока.
+    // README п.9,10: съесть можно только одиночную фишку на НЕбезопасной клетке.
+    // Безопасная клетка (общая или стартовая) защищает стоящую на ней фишку от захвата,
+    // а клетка с несколькими фишками (мост/барьер) — полная, поэтому сюда не попадает
+    // (проверка заполненности выше возвращает false до захвата).
     const otherChips = target.places.filter((p) => p && p.player !== chip.player);
-    let captured = false;
     if (otherChips.length > 0) {
-      // Отправляем все чужие фишки на старт
-      for (const otherChip of otherChips) {
-        if (otherChip) {
+      const victim = otherChips[0]!;
+      const captureAllowed = !isSafeCell(target, victim.player);
+      if (captureAllowed) {
+        // Отправляем чужие фишки на старт
+        for (const otherChip of otherChips) {
+          if (otherChip) {
+            debugLogPush(
+              'moveChip',
+              `Захват! Фишка #${otherChip.id} (${otherChip.player.color}) отправлена на базу`,
+              'success',
+              { capturedChipId: otherChip.id, capturedColor: otherChip.player.color },
+            );
+            sendToStart(otherChip);
+          }
+        }
+        // Бонус +20 за обычное сбивание, но НЕ за «расплющивание» (README п.11)
+        if (isBaseExit) {
           debugLogPush(
             'moveChip',
-            `Захват! Фишка #${otherChip.id} (${otherChip.player.color}) отправлена на базу`,
-            'success',
-            { capturedChipId: otherChip.id, capturedColor: otherChip.player.color },
+            'Расплющивание при выходе с базы — бонус +20 не начисляется (README п.11)',
+            'warning',
           );
-          sendToStart(otherChip);
-          captured = true;
+        } else {
+          addBonus(20);
+          debugLogPush('moveChip', 'Бонус +20 за захват', 'success');
         }
-      }
-      // Начисляем бонус +20 за захват
-      if (captured) {
-        addBonus(20);
-        debugLogPush('moveChip', 'Бонус +20 за захват', 'success');
+      } else {
+        debugLogPush(
+          'moveChip',
+          'Захват на безопасной ячейке не происходит (README п.9,10)',
+          'warning',
+        );
       }
     }
 

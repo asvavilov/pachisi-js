@@ -666,14 +666,75 @@ describe('game store', () => {
       expect(game.currentBonusSteps).toEqual([]);
     });
 
-    it.todo(
-      'выход на занятую стартовую («расплющивание») → фишки на базу БЕЗ бонуса +20 (README п.11)',
-    );
-    it.todo('несколько фишек на ячейке (мост/барьер) → захват не происходит (README п.10)');
-    it.todo(
-      'захват на безопасной ячейке не происходит (README п.9,10). FIXME: moveChip не проверяет isSafeCell',
-    );
-    it.todo('обязательный ход: доступен только один вариант → он используется (README п.3)');
+    it('выход на занятую стартовую («расплющивание») → фишки на базу БЕЗ бонуса +20 (README п.11)', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      playerStore.init(0);
+      // Одна фишка уже в игре, чтобы НЕ сработало правило п.4 (вывод двух фишек)
+      putOnMain(playerStore.players[0]!, boardStore.board, 1, 30);
+      // На стартовой клетке игрока 0 (cell 4) стоит чужая фишка
+      const victim = putOnMain(playerStore.players[1]!, boardStore.board, 0, 4);
+      const exitCell = boardStore.board.cells[4]!;
+      diceStore.items = [2, 3]; // сумма 5 → выход с базы
+
+      const res = game.moveChip(playerStore.players[0]!.chips[0]!, 5, exitCell);
+      expect(res).toBe(true);
+      // Чужая фишка «расплющена» → на базу
+      expect(victim.cell).toBe(playerStore.players[1]!.baseBoard.cells[0]);
+      // Бонус +20 НЕ начисляется
+      expect(game.currentBonusSteps).toEqual([]);
+      expect(playerStore.players[0]!.chips[0]!.cell).toBe(exitCell);
+    });
+
+    it('несколько фишек на ячейке (мост/барьер) → захват не происходит (README п.10)', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      playerStore.init(0);
+      const chip = putOnMain(playerStore.players[0]!, boardStore.board, 0, 10);
+      // Две фишки разных цветов на клетке 13 → мост (клетка полная)
+      const victimA = putOnMain(playerStore.players[1]!, boardStore.board, 0, 13);
+      const victimB = putOnMain(playerStore.players[2]!, boardStore.board, 0, 13);
+      diceStore.items = [3, 4];
+
+      expect(game.moveChip(chip, 3, boardStore.board.cells[13]!)).toBe(false);
+      // Фишка не сдвинута, кубик не потрачен
+      expect(chip.cell).toBe(boardStore.board.cells[10]);
+      expect(diceStore.used).toEqual([]);
+      // Захвата не произошло — обе чужие фишки остаются на месте
+      expect(victimA.cell).toBe(boardStore.board.cells[13]);
+      expect(victimB.cell).toBe(boardStore.board.cells[13]);
+      expect(game.currentBonusSteps).toEqual([]);
+    });
+
+    it('захват на безопасной ячейке не происходит (README п.9,10)', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      playerStore.init(0);
+      const chip = putOnMain(playerStore.players[0]!, boardStore.board, 0, 8);
+      // Общая безопасная клетка 11 занята чужой фишкой
+      const victim = putOnMain(playerStore.players[1]!, boardStore.board, 0, 11);
+      diceStore.items = [3, 4];
+
+      const res = game.moveChip(chip, 3, boardStore.board.cells[11]!);
+      expect(res).toBe(true);
+      // Фишка встала на безопасную клетку, но чужая не съедена
+      expect(chip.cell).toBe(boardStore.board.cells[11]);
+      expect(victim.cell).toBe(boardStore.board.cells[11]);
+      expect(game.currentBonusSteps).toEqual([]);
+    });
+
+    it('обязательный ход: доступен только один вариант → он используется (README п.3)', () => {
+      const { game, playerStore, diceStore } = setupGame();
+      playerStore.init(0);
+      const chip = playerStore.players[0]!.chips[0]!;
+      // С home[6] только шаг 1 приводит к home[7] (финиш); 4 и 5 выходят за пределы
+      chip.go(playerStore.players[0]!.homeBoard.cells[6]!);
+      diceStore.items = [1, 4];
+
+      // Доступен единственный вариант хода
+      expect(game.getPossibleStepsForChip(chip)).toEqual([1]);
+
+      const res = game.moveChip(chip, 1, playerStore.players[0]!.homeBoard.cells[7]!);
+      expect(res).toBe(true);
+      expect(chip.finished).toBe(true);
+    });
     it('«+7»: дубль при всех фишках в игре → перемещение на 7 (README п.6)', () => {
       const { game, playerStore, boardStore, diceStore } = setupGame();
       playerStore.init(0);
