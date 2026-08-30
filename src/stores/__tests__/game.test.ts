@@ -7,7 +7,7 @@ import { useBoardStore } from 'src/stores/board';
 import { useGameStore } from 'src/stores/game';
 import { GameStateEnum } from 'src/lib/GameState';
 import type { Player } from 'src/lib/player';
-import type { Board } from 'src/lib/board';
+import { BoardType, type Board } from 'src/lib/board';
 
 /**
  * Хелперы игрового store-теста.
@@ -542,9 +542,31 @@ describe('game store', () => {
       const variants = game.findTargetCellVariants(playerStore.players[0]!.chips[0]!.cell, 5);
       expect(variants).toContain(boardStore.board.cells[13]);
     });
-    it.todo(
-      'из base при всех 4 фишках в базе и сумме 5 → вывод двух фишек (README п.4 — требуется реализация)',
-    );
+    it('из base при всех 4 фишках в базе и сумме 5 → вывод двух фишек (README п.4)', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      playerStore.init(0);
+      const player = playerStore.players[0]!;
+      // По умолчанию все 4 фишки игрока 0 находятся в базе
+      expect(player.chips.every((c) => c.cell?.board.type === BoardType.base)).toBe(true);
+
+      diceStore.items = [2, 3]; // сумма 5 → выход с базы
+      const baseCell = player.baseBoard.cells[0]!;
+      const exitCell = boardStore.board.cells[4]!; // стартовая ячейка игрока 0
+
+      // Выходная ячейка доступна из базы (можно вывести фишку)
+      expect(game.findTargetCellVariants(baseCell, 5)).toContain(exitCell);
+
+      // Ход по сумме 5 при всех 4 фишках в базе выводит СРАЗУ две фишки на стартовую
+      const res = game.moveChip(player.chips[0]!, 5, exitCell);
+      expect(res).toBe(true);
+      expect(player.chips[0]!.cell).toBe(exitCell);
+      expect(player.chips[1]!.cell).toBe(exitCell);
+      // Остальные фишки остаются в базе
+      expect(player.chips[2]!.cell?.board.type).toBe(BoardType.base);
+      expect(player.chips[3]!.cell?.board.type).toBe(BoardType.base);
+      // Использована сумма 5 (оба кубика [2,3])
+      expect(diceStore.used).toEqual([2, 3]);
+    });
   });
 
   // =================================================================

@@ -769,8 +769,37 @@ export const useGameStore = defineStore('game', () => {
       }
     }
 
+    // README п.4: если все 4 фишки игрока в базе и сумма кубиков равна 5,
+    // выводятся сразу две фишки на стартовую клетку.
+    const isBaseExitMove =
+      chip.cell?.board.type === BoardType.base &&
+      steps === 5 &&
+      target.board.type === BoardType.main;
+    const allChipsOnBaseBeforeMove =
+      isBaseExitMove &&
+      playerStore.players[chip.player.ind]!.chips.every(
+        (c) => c.cell?.board.type === BoardType.base,
+      );
+
     // Выполняем перемещение
     chip.go(target);
+
+    // README п.4: при всех 4 фишках в базе и сумме 5 автоматически выводится вторая фишка.
+    if (allChipsOnBaseBeforeMove) {
+      const player = playerStore.players[chip.player.ind]!;
+      const secondChip = player.chips.find(
+        (c) => c !== chip && c.cell?.board.type === BoardType.base,
+      );
+      if (secondChip) {
+        secondChip.go(target);
+        debugLogPush(
+          'moveChip',
+          `README п.4: все 4 фишки в базе + сумма 5 — выведена вторая фишка #${secondChip.id}`,
+          'success',
+        );
+      }
+    }
+
     selectedChip.value = null;
 
     // README п.7: фиксируем использование дубля для хода (для правила трёх дублей).
