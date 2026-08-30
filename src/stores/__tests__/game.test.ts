@@ -377,8 +377,26 @@ describe('game store', () => {
       expect(game.getAvailableSteps()).toEqual([3, 4, 7, 10]);
     });
 
-    it.todo('правило «+7»: все 4 фишки в игре + дубль → шаг 7 (README п.6 — требуется реализация)');
-    it.todo('без «+7»: в базе есть фишка → дубль даёт свои значения (README п.6)');
+    it('правило «+7»: все 4 фишки в игре + дубль → шаг 7 (README п.6)', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      // Все 4 фишки текущего игрока (0) в игре — на основной доске
+      for (let i = 0; i < 4; i++) {
+        putOnMain(playerStore.players[0]!, boardStore.board, i, 10 + i * 5);
+      }
+      diceStore.items = [3, 3]; // дубль
+      expect(game.getAvailableSteps()).toContain(7);
+    });
+
+    it('без «+7»: в базе есть фишка → дубль даёт свои значения (README п.6)', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      // Только 3 фишки в игре, четвёртая остаётся на базе → правило «+7» не действует
+      for (let i = 0; i < 3; i++) {
+        putOnMain(playerStore.players[0]!, boardStore.board, i, 10 + i * 5);
+      }
+      diceStore.items = [3, 3];
+      // Дубль без правила «+7» даёт свои значения (каждый кубик + сумма)
+      expect(game.getAvailableSteps()).toEqual([3, 3, 6]);
+    });
   });
 
   // =================================================================
@@ -625,7 +643,21 @@ describe('game store', () => {
       'захват на безопасной ячейке не происходит (README п.9,10). FIXME: moveChip не проверяет isSafeCell',
     );
     it.todo('обязательный ход: доступен только один вариант → он используется (README п.3)');
-    it.todo('«+7»: дубль при всех фишках в игре → перемещение на 7 (README п.6)');
+    it('«+7»: дубль при всех фишках в игре → перемещение на 7 (README п.6)', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      playerStore.init(0);
+      // Все 4 фишки в игре → правило «+7» активно
+      for (let i = 0; i < 4; i++) {
+        putOnMain(playerStore.players[0]!, boardStore.board, i, 10 + i * 5);
+      }
+      const chip = playerStore.players[0]!.chips[0]!;
+      diceStore.items = [3, 3]; // дубль
+      const res = game.moveChip(chip, 7, boardStore.board.cells[17]!);
+      expect(res).toBe(true);
+      expect(chip.cell).toBe(boardStore.board.cells[17]);
+      // Использован один кубик дубля
+      expect(diceStore.used.length).toBe(1);
+    });
     it.todo('третья фишка на клетку с двумя фишками → false (README п.5)');
   });
 

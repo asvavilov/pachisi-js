@@ -351,6 +351,19 @@ export const useGameStore = defineStore('game', () => {
     return diceStore.isEquals || (playerStore.allChipsOnBase && diceStore.hasAddon);
   });
 
+  /**
+   * README п.6: правило «+7».
+   * Активно, когда у текущего игрока нет ни одной фишки на базе (все 4 в игре)
+   * и выпал дубль. В этом случае каждое значение кубика соответствует перемещению
+   * на 7 клеток (аналог «6» в классическом варианте с одним кубиком).
+   */
+  const isPlusSevenActive = computed(
+    () =>
+      diceStore.isEquals &&
+      !!playerStore.current &&
+      playerStore.current.chips.every((chip) => chip.cell?.board.type !== BoardType.base),
+  );
+
   const movableChips = computed(() => getMovableChips());
 
   const hasMovableChips = computed(() => movableChips.value.length > 0);
@@ -412,11 +425,21 @@ export const useGameStore = defineStore('game', () => {
   const getAvailableSteps = (): number[] => {
     const steps: number[] = [];
     if (diceStore.items.length === 0) return steps;
-    steps.push(...diceStore.unused);
-    // Если оба кубика не использованы, можно предложить сумму
-    if (diceStore.unusedSum && !steps.includes(diceStore.unusedSum)) {
-      steps.push(diceStore.unusedSum);
+
+    // README п.6: правило «+7» — дубль при всех 4 фишках в игре.
+    // Каждое значение кубика соответствует перемещению на 7 клеток (аналог «6» в классике).
+    if (isPlusSevenActive.value) {
+      if (diceStore.unused.length > 0 && !steps.includes(7)) {
+        steps.push(7);
+      }
+    } else {
+      steps.push(...diceStore.unused);
+      // Если оба кубика не использованы, можно предложить сумму
+      if (diceStore.unusedSum && !steps.includes(diceStore.unusedSum)) {
+        steps.push(diceStore.unusedSum);
+      }
     }
+
     // Бонусные шаги (каждый бонус добавляется как отдельный шаг)
     for (const bonus of currentBonusSteps.value) {
       steps.push(bonus);
@@ -696,6 +719,13 @@ export const useGameStore = defineStore('game', () => {
         steps,
         bonusType: steps === 20 ? 'capture' : 'finish',
       });
+    } else if (isPlusSevenActive.value && steps === 7) {
+      // README п.6: шаг «+7» соответствует одному кубику дубля (используем его напрямую)
+      const dieValue = diceStore.unused[0];
+      if (dieValue !== undefined) {
+        diceStore.used.push(dieValue);
+      }
+      debugLogPush('moveChip', `Использован кубик ${steps} (правило «+7»)`, 'info', { steps });
     } else {
       diceStore.use(steps);
       debugLogPush('moveChip', `Использован кубик ${steps}`, 'info', { steps });
