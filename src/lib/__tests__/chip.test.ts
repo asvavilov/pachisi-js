@@ -120,4 +120,47 @@ describe('Chip', () => {
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
   });
+
+  it('go() когда фишки нет в places (idx<0) — всё равно переносит и добавляет', () => {
+    const playerLocal = new Player(0, false, PlayerColor.yellow);
+    const boardA = new Board(BoardType.base, playerLocal, 1, undefined, undefined, { 0: 4 });
+    const boardB = new Board(BoardType.main, undefined, 1, undefined, undefined);
+    const chip = new Chip(playerLocal, boardA.cells[0]!, 0);
+    // Убираем фишку из places вручную → findIndex вернёт -1 (else-ветка).
+    boardA.cells[0]!.places[0] = null;
+    chip.go(boardB.cells[0]!);
+    expect(chip.cell).toBe(boardB.cells[0]);
+    expect(rawAt(boardB.cells[0]!, 0)).toBe(chip);
+    // Старая ячейка так и осталась пустой.
+    expect(boardA.cells[0]!.places[0]).toBeNull();
+  });
+
+  it('go() fallback: находит фишку по id, если toRaw-сравнение не сработало', () => {
+    const playerLocal = new Player(0, false, PlayerColor.yellow);
+    const boardA = new Board(BoardType.base, playerLocal, 1, undefined, undefined, { 0: 4 });
+    const boardB = new Board(BoardType.main, undefined, 1, undefined, undefined);
+    const chip = new Chip(playerLocal, boardA.cells[0]!, 0);
+    // Симулируем «несовпадение по ссылке»: подменяем место на объект-дубликат с тем же id.
+    // Fallback-цикл должен найти фишку по `place.id === this.id` и очистить место.
+    const impostor = { id: chip.id };
+    boardA.cells[0]!.places[0] = impostor as never;
+    chip.go(boardB.cells[0]!);
+    expect(boardA.cells[0]!.places[0]).toBeNull();
+    expect(chip.cell).toBe(boardB.cells[0]);
+    expect(rawAt(boardB.cells[0]!, 0)).toBe(chip);
+  });
+
+  it('go() fallback: когда в places есть чужая фишка — она не затирается', () => {
+    const playerLocal = new Player(0, false, PlayerColor.yellow);
+    const otherPlayer = new Player(1, true, PlayerColor.red);
+    const boardA = new Board(BoardType.base, playerLocal, 1, undefined, undefined, { 0: 4 });
+    const boardB = new Board(BoardType.main, undefined, 1, undefined, undefined);
+    const chip = new Chip(playerLocal, boardA.cells[0]!, 0);
+    const stranger = new Chip(otherPlayer, boardA.cells[0]!, 1);
+    // Чужая фишка с другим id остаётся на месте после fallback-поиска.
+    boardA.cells[0]!.places[0] = null;
+    chip.go(boardB.cells[0]!);
+    expect(rawAt(boardA.cells[0]!, 1)).toBe(stranger);
+    expect(chip.cell).toBe(boardB.cells[0]);
+  });
 });

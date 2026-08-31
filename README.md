@@ -2,9 +2,16 @@
 
 ## TODO/FIXME
 
-TODO продумать архитектуру (ФП)
+- [ ] Продумать архитектуру (ФП)
+- [ ] Разобраться с дублирующимся и лишним функционалом
+- [ ] Покрыть тестами `.vue`-компоненты и добавить интеграционные тесты полного игрового цикла (раздел 6 [`plans/testing-plan.md`](plans/testing-plan.md))
 
-TODO разобраться с дублирующимся и лишним функционалом
+## Тестирование
+
+- **Vitest** + `@vitest/coverage-v8`. Команды: `npm run test`, `npm run test:watch`, `npm run test:coverage`.
+- Покрытие игровой логики (`src/lib`, `src/stores`, `src/utils`): **96%+ statements, 88%+ branches**.
+- В [`vitest.config.ts`](vitest.config.ts) заданы пороги: statements 95, branches 85, functions 96, lines 95.
+- Подробный план — в [`plans/testing-plan.md`](plans/testing-plan.md).
 
 ## Правила игры
 

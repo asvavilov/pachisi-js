@@ -937,4 +937,102 @@ describe('game store', () => {
       expect(game.selectedChip).toBeNull();
     });
   });
+
+  // =================================================================
+  // 4.4.11 nextPlayer — смена хода
+  // =================================================================
+  describe('nextPlayer', () => {
+    it('сбрасывает кости, переводит ход и ставит WAIT_ROLL', () => {
+      const { game, playerStore, diceStore } = setupGame();
+      playerStore.init(0);
+      diceStore.items = [3, 4];
+      game.nextPlayer();
+      expect(playerStore.currentIndex).toBe(1);
+      expect(diceStore.items).toEqual([]);
+      expect(game.stateId).toBe(GameStateEnum.WAIT_ROLL);
+    });
+  });
+
+  // =================================================================
+  // 4.4.12 canAddonRollDice — право на дополнительный бросок
+  // =================================================================
+  describe('canAddonRollDice', () => {
+    it('true при дубле', () => {
+      const { game, diceStore } = setupGame();
+      diceStore.items = [3, 3];
+      expect(game.canAddonRollDice).toBe(true);
+    });
+
+    it('false без дубля, даже если все фишки на базе', () => {
+      const { game, playerStore, diceStore } = setupGame();
+      playerStore.init(0); // все фишки на базе
+      diceStore.items = [3, 4]; // не дубль → доп. броска нет
+      expect(game.canAddonRollDice).toBe(false);
+    });
+  });
+
+  // =================================================================
+  // 4.4.13 highlightedCellIndices — подсветка целевых ячеек
+  // =================================================================
+  describe('highlightedCellIndices', () => {
+    it('подсвечивает целевую ячейку на главной доске', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      const chip = putOnMain(playerStore.players[0]!, boardStore.board, 0, 10);
+      diceStore.items = [3, 4];
+      game.selectedChip = chip;
+      const indices = game.highlightedCellIndices;
+      // С клетки 10 шаги 3/4/7 → ячейки 13/14/17 на главной доске.
+      expect(indices).toContain(13);
+      expect(indices).toContain(14);
+      expect(indices).toContain(17);
+    });
+
+    it('подсвечивает ячейку на финишной доске со смещением 1000+', () => {
+      const { game, playerStore, diceStore } = setupGame();
+      playerStore.init(0);
+      const chip = playerStore.players[0]!.chips[0]!;
+      chip.go(playerStore.players[0]!.homeBoard.cells[2]!);
+      diceStore.items = [2, 2]; // шаги 2/2/4 внутри home
+      game.selectedChip = chip;
+      const indices = game.highlightedCellIndices;
+      // home[2]+2 → home[4] (индекс 4 → 1000+4)
+      expect(indices).toContain(1000 + 4);
+    });
+
+    it('пусто без выбранной фишки', () => {
+      const { game } = setupGame();
+      expect(game.highlightedCellIndices).toEqual([]);
+    });
+  });
+
+  // =================================================================
+  // 4.4.14 Правило трёх дублей: второй дубль использован для хода
+  // =================================================================
+  it('3 дубля, если второй использован для хода → последняя фишка на базу (README п.7)', () => {
+    const { game, playerStore, boardStore } = setupGame();
+    game.stateId = GameStateEnum.WAIT_ROLL;
+    playerStore.init(0);
+    const chip = putOnMain(playerStore.players[0]!, boardStore.board, 0, 10);
+
+    // 1-й дубль → используется для хода (3 шага)
+    vi.restoreAllMocks();
+    mockRoll(3, 3);
+    game.rollDice();
+    expect(game.doublesCount).toBe(1);
+    game.moveChip(chip, 3, boardStore.board.cells[13]!);
+
+    // 2-й дубль → используется для хода (фиксирует lastMovedChip / secondDoubleUsedForMove)
+    vi.restoreAllMocks();
+    mockRoll(3, 3);
+    game.rollDice();
+    expect(game.doublesCount).toBe(2);
+    game.moveChip(chip, 3, boardStore.board.cells[16]!);
+
+    // 3-й дубль → поскольку второй был использован, последняя двинутая фишка уходит на базу
+    vi.restoreAllMocks();
+    mockRoll(3, 3);
+    game.rollDice();
+    expect(game.doublesCount).toBe(0);
+    expect(chip.cell).toBe(playerStore.players[0]!.baseBoard.cells[0]);
+  });
 });
