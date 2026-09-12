@@ -7,15 +7,15 @@
 - [x] Интеграционные тесты полного игрового цикла (раздел 6 [`plans/testing-plan.md`](plans/testing-plan.md))
 - [ ] Покрыть тестами `.vue`-компоненты
 - [x] Реализовать ИИ ботов (`src/lib/ai.ts` + `aiActOnce()` + `useAiDriver`)
-- [ ] Экраны настройки партии и подведения итогов (места игроков)
+- [x] Стартовый экран и экран подведения итогов (места игроков, «Новая партия»)
 
 Актуальный план доработок до релиза — в [`PLANS.md`](PLANS.md).
 
 ## Тестирование
 
 - **Vitest** + `@vitest/coverage-v8`. Команды: `npm run test`, `npm run test:watch`, `npm run test:coverage`.
-- **267 тестов / 12 файлов** (unit + интеграционные).
-- Покрытие игровой логики (`src/lib`, `src/stores`, `src/utils`): **statements 96.03%, branches 91.37%, functions 98.5%, lines 96.8%**.
+- **271 тест / 12 файлов** (unit + интеграционные).
+- Покрытие игровой логики (`src/lib`, `src/stores`, `src/utils`): **statements 96.15%, branches 91.22%, functions 98.56%, lines 96.9%**.
 - В [`vitest.config.ts`](vitest.config.ts) заданы пороги: statements 95, branches 85, functions 96, lines 95.
 - Подробный план — в [`plans/testing-plan.md`](plans/testing-plan.md).
 

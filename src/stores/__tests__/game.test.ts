@@ -77,6 +77,32 @@ describe('game store', () => {
     });
   });
 
+  describe('newGame', () => {
+    it('возвращает фишки на базу и переводит игру в START', () => {
+      const { game, playerStore, boardStore } = setupGame();
+      const chip = putOnMain(playerStore.players[1]!, boardStore.board, 0, 10);
+      chip.finish();
+
+      game.newGame();
+
+      expect(game.stateId).toBe(GameStateEnum.START);
+      expect(chip.cell).toBe(playerStore.players[1]!.baseBoard.cells[0]);
+      expect(chip.finished).toBe(false);
+      expect(playerStore.currentIndex).toBeUndefined();
+    });
+
+    it('сбрасывает кубики и счётчик дублей', () => {
+      const { game, diceStore } = setupGame();
+      diceStore.items = [3, 3];
+      game.doublesCount = 2;
+
+      game.newGame();
+
+      expect(diceStore.items).toEqual([]);
+      expect(game.doublesCount).toBe(0);
+    });
+  });
+
   // =================================================================
   // 4.4.2 Выбор первого игрока (SELECT_FIRST)
   // =================================================================

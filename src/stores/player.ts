@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
+import { computed, ref, toRaw } from 'vue';
 import type { PlayerIndex } from 'src/lib/player';
 import { Player, PlayerColor } from 'src/lib/player';
 import { BoardType } from 'src/lib/board';
@@ -21,6 +21,32 @@ export const usePlayerStore = defineStore('player', () => {
   const init = (startIndex?: PlayerIndex) => {
     currentIndex.value = startIndex ?? 0;
     winners.value = [];
+  };
+
+  /**
+   * Полный сброс фишек для новой партии: все фишки возвращаются на свою базу,
+   * очищаются все занятые ими ячейки, снимается флаг `finished`, сбрасываются победители.
+   */
+  const reset = () => {
+    // Освобождаем все ячейки, где сейчас стоят фишки.
+    for (const player of players.value) {
+      for (const chip of player.chips) {
+        const places = chip.cell.places;
+        const idx = places.findIndex((p) => p !== null && (toRaw(p) === chip || p.id === chip.id));
+        if (idx >= 0) places[idx] = null;
+      }
+    }
+    // Возвращаем каждую фишку на своё место в базе.
+    for (const player of players.value) {
+      const base = player.baseBoard.cells[0]!;
+      player.chips.forEach((chip, i) => {
+        chip.cell = base;
+        base.places[i] = chip;
+        chip.finished = false;
+      });
+    }
+    winners.value = [];
+    currentIndex.value = undefined;
   };
 
   /**
@@ -96,6 +122,7 @@ export const usePlayerStore = defineStore('player', () => {
     winners,
     currentIndex,
     init,
+    reset,
     next,
     current,
     allChipsOnBase,

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { usePlayerStore } from 'src/stores/player';
+import { useBoardStore } from 'src/stores/board';
 import { BoardType } from 'src/lib/board';
 
 describe('player store', () => {
@@ -201,5 +202,35 @@ describe('player store', () => {
       store.checkWinner(store.players[idx]!);
     }
     expect(store.places.map((p) => p.ind)).toEqual([2, 0, 3, 1]);
+  });
+
+  it('reset() возвращает фишки на базу, снимает finished и очищает доску', () => {
+    const store = usePlayerStore();
+    const boardStore = useBoardStore();
+    store.init();
+    const chip = store.players[0]!.chips[0]!;
+    chip.go(boardStore.board.cells[10]!);
+    chip.finish();
+
+    store.reset();
+
+    expect(chip.cell).toBe(store.players[0]!.baseBoard.cells[0]);
+    expect(chip.finished).toBe(false);
+    expect(boardStore.board.cells[10]!.places).toEqual([null, null]);
+    expect(store.winners).toEqual([]);
+    expect(store.currentIndex).toBeUndefined();
+  });
+
+  it('reset() очищает и финишную дорожку', () => {
+    const store = usePlayerStore();
+    store.init();
+    const chip = store.players[2]!.chips[1]!;
+    chip.go(store.players[2]!.homeBoard.cells[7]!);
+    chip.finish();
+
+    store.reset();
+
+    expect(store.players[2]!.homeBoard.cells[7]!.places).toEqual([null, null, null, null]);
+    expect(chip.cell).toBe(store.players[2]!.baseBoard.cells[0]);
   });
 });

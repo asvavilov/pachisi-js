@@ -119,9 +119,9 @@ export const useGameStore = defineStore('game', () => {
   const lastMovedChip = ref<Chip | null>(null);
 
   /**
-   * Инициализация начала игры.
+   * Сброс изменяемого состояния партии (без расстановки фишек).
    */
-  const initGame = () => {
+  const resetMatchState = () => {
     playerStore.init();
     diceStore.reset();
     firstRollPlayerIndex.value = 0;
@@ -130,10 +130,29 @@ export const useGameStore = defineStore('game', () => {
     doublesCount.value = 0;
     secondDoubleUsedForMove.value = false;
     lastMovedChip.value = null;
+    currentBonusSteps.value = [];
+    selectedChip.value = null;
+    clearDebugLog();
+  };
+
+  /**
+   * Инициализация начала игры (со стартового экрана).
+   */
+  const initGame = () => {
+    resetMatchState();
     currentIndex.value = 0;
     stateId.value = GameStateEnum.SELECT_FIRST;
-    clearDebugLog();
     debugLogPush('initGame', 'Игра инициализирована, состояние: SELECT_FIRST', 'info');
+  };
+
+  /**
+   * Новая партия: фишки возвращаются на базу, игра возвращается на стартовый экран.
+   */
+  const newGame = () => {
+    resetMatchState();
+    playerStore.reset();
+    stateId.value = GameStateEnum.START;
+    debugLogPush('newGame', 'Новая партия — возврат на стартовый экран', 'info');
   };
 
   /**
@@ -1115,6 +1134,7 @@ export const useGameStore = defineStore('game', () => {
 
   return {
     initGame,
+    newGame,
     stateId,
     state,
     //canRollDice,
