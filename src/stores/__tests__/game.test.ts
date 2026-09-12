@@ -1154,4 +1154,92 @@ describe('game store', () => {
     expect(game.doublesCount).toBe(0);
     expect(chip.cell).toBe(playerStore.players[0]!.baseBoard.cells[0]);
   });
+
+  // =================================================================
+  // 1.4 ИИ: aiActOnce / getCandidateMoves / buildAiView
+  // =================================================================
+  describe('ИИ', () => {
+    it('aiActOnce() не действует, когда ходит человек', () => {
+      const { game, playerStore } = setupGame();
+      playerStore.init(0); // игрок 0 — человек
+      game.stateId = GameStateEnum.WAIT_ROLL;
+      expect(game.isAiTurn).toBe(false);
+      expect(game.aiActOnce()).toBe(false);
+    });
+
+    it('aiActOnce() в SELECT_FIRST бросает кости за ИИ', () => {
+      const { game } = setupGame();
+      game.firstRollPlayerIndex = 1; // игрок 1 — ИИ
+      mockRoll(3, 4);
+      expect(game.isAiTurn).toBe(true);
+      expect(game.aiActOnce()).toBe(true);
+      expect(game.firstRollResults[1]).toBe(7);
+    });
+
+    it('aiActOnce() в WAIT_ROLL бросает кости за ИИ', () => {
+      const { game, playerStore, diceStore } = setupGame();
+      playerStore.init(1);
+      game.stateId = GameStateEnum.WAIT_ROLL;
+      mockRoll(2, 3);
+      expect(game.aiActOnce()).toBe(true);
+      expect(diceStore.items).toEqual([2, 3]);
+    });
+
+    it('aiActOnce() в WAIT_STEP двигает фишку ИИ', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      playerStore.init(1);
+      const chip = putOnMain(playerStore.players[1]!, boardStore.board, 0, 10);
+      diceStore.items = [3, 4];
+      game.stateId = GameStateEnum.WAIT_STEP;
+      const from = chip.cell;
+      expect(game.aiActOnce()).toBe(true);
+      expect(chip.cell).not.toBe(from);
+    });
+
+    it('getCandidateMoves() собирает легальные ходы', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      playerStore.init(1);
+      putOnMain(playerStore.players[1]!, boardStore.board, 0, 10);
+      diceStore.items = [3, 4];
+      expect(game.getCandidateMoves().length).toBeGreaterThan(0);
+    });
+
+    it('getCandidateMoves() пуст, если нет текущего игрока', () => {
+      const { game, playerStore } = setupGame();
+      playerStore.currentIndex = undefined;
+      expect(game.getCandidateMoves()).toEqual([]);
+    });
+
+    it('buildAiView() включает фишки соперников и проверку безопасности', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      playerStore.init(1);
+      putOnMain(playerStore.players[1]!, boardStore.board, 0, 10);
+      putOnMain(playerStore.players[0]!, boardStore.board, 0, 30);
+      diceStore.items = [3, 4];
+      const view = game.buildAiView();
+      expect(view.opponents.some((chip) => chip.player.ind === 0)).toBe(true);
+      expect(view.isSafeForMe(boardStore.board.cells[21]!)).toBe(true); // старт игрока 1
+    });
+
+    it('ИИ против ИИ доигрывает партию до FINISH', () => {
+      const { game, playerStore } = setupGame();
+      playerStore.players.forEach((p) => (p.ai = true));
+
+      // Детерминированный LCG, чтобы партия была воспроизводимой.
+      let seed = 987654321;
+      vi.spyOn(Math, 'random').mockImplementation(() => {
+        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+        return seed / 4294967296;
+      });
+
+      let guard = 0;
+      while (game.stateId !== GameStateEnum.FINISH && guard < 30000) {
+        if (!game.aiActOnce()) break;
+        guard++;
+      }
+
+      expect(game.stateId).toBe(GameStateEnum.FINISH);
+      expect(playerStore.places.length).toBeGreaterThan(0);
+    });
+  });
 });

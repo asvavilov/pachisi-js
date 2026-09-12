@@ -16,6 +16,9 @@ import { onMounted } from 'vue';
 import MainBoard from 'src/components/board/MainBoard.vue';
 import GamePanel from 'src/components/GamePanel.vue';
 import { useGameStore } from 'src/stores/game';
+import { useAiDriver } from 'src/composables/useAiDriver';
+
+useAiDriver();
 
 onMounted(() => {
   const game = useGameStore();

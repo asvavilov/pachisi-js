@@ -9,6 +9,8 @@ import { GameStateEnum, GameStateTree } from 'src/lib/GameState';
 import type { Board } from 'src/lib/board';
 import { BoardType } from 'src/lib/board';
 import type { PlayerIndex, PlayerData } from 'src/lib/player';
+import { chooseMove } from 'src/lib/ai';
+import type { AiView, MoveCandidate } from 'src/lib/ai';
 
 /**
  * Запись в логе отладки
@@ -1017,6 +1019,91 @@ export const useGameStore = defineStore('game', () => {
     );
   };
 
+  /**
+   * Все легальные варианты хода текущего игрока.
+   * Единый источник и для UI, и для ИИ — правила уже применены.
+   */
+  const getCandidateMoves = (): MoveCandidate[] => {
+    const moves: MoveCandidate[] = [];
+    for (const chip of getMovableChips()) {
+      for (const steps of getPossibleStepsForChip(chip)) {
+        for (const targetCell of findTargetCellVariants(chip.cell, steps)) {
+          moves.push({ chip, steps, targetCell });
+        }
+      }
+    }
+    return moves;
+  };
+
+  /**
+   * Данные для выбора хода ИИ: кандидаты, фишки соперников и проверка безопасности.
+   */
+  const buildAiView = (): AiView => {
+    const player = playerStore.current!;
+    const opponents = playerStore.activePlayers
+      .filter((p) => p !== playerStore.current)
+      .flatMap((p) => p.chips)
+      .filter((chip) => !chip.finished);
+    return {
+      candidates: getCandidateMoves(),
+      opponents,
+      isSafeForMe: (cell) => isSafeCell(cell, player),
+    };
+  };
+
+  /**
+   * Игрок, который сейчас должен действовать (бросать кости или ходить).
+   * На этапе SELECT_FIRST очередь определяется `firstRollPlayerIndex`, а не `currentIndex`.
+   */
+  const actingPlayerIndex = computed<PlayerIndex | undefined>(() =>
+    stateId.value === GameStateEnum.SELECT_FIRST
+      ? firstRollPlayerIndex.value
+      : playerStore.currentIndex,
+  );
+
+  const actingPlayer = computed(() => {
+    const index = actingPlayerIndex.value;
+    return index === undefined ? undefined : playerStore.players[index];
+  });
+
+  /** Сейчас действует ИИ? */
+  const isAiTurn = computed(() => actingPlayer.value?.ai === true);
+
+  /**
+   * Один шаг ИИ. Возвращает `true`, если действие выполнено (драйвер должен продолжить).
+   * Выбор хода делегируется чистой функции `chooseMove`.
+   */
+  const aiActOnce = (): boolean => {
+    if (stateId.value === GameStateEnum.FINISH) return false;
+    const actor = actingPlayer.value;
+    if (!actor?.ai) return false;
+
+    if (stateId.value === GameStateEnum.SELECT_FIRST || stateId.value === GameStateEnum.WAIT_ROLL) {
+      rollDice();
+      return true;
+    }
+
+    if (stateId.value === GameStateEnum.WAIT_STEP) {
+      const move = chooseMove(buildAiView());
+      if (!move) {
+        debugLogPush('aiActOnce', 'ИИ: нет доступных ходов — пропуск', 'warning');
+        return false;
+      }
+      debugLogPush(
+        'aiActOnce',
+        `ИИ (${actor.color}): фишка #${move.chip.id} → ${move.steps} шаг(ов)`,
+        'info',
+      );
+      if (!moveChip(move.chip, move.steps, move.targetCell)) {
+        debugLogPush('aiActOnce', 'ИИ: ход отклонён правилами — пропуск', 'error');
+        return false;
+      }
+      return true;
+    }
+
+    return false;
+  };
+
   // Обработчик клика на фишку
   const onChipClick = (chip: Chip | null | undefined) => {
     // Блокируем выбор фишек на этапе выбора первого игрока
@@ -1071,5 +1158,12 @@ export const useGameStore = defineStore('game', () => {
     addBonus,
     checkWinner,
     canAddonRollDice,
+    // ИИ
+    getCandidateMoves,
+    buildAiView,
+    actingPlayerIndex,
+    actingPlayer,
+    isAiTurn,
+    aiActOnce,
   };
 });
