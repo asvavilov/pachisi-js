@@ -128,8 +128,8 @@
 
   <!-- Ход при отсутствии возможных ходов переходит автоматически (README п.13). -->
 
-  <!-- Debug Panel -->
-  <DebugPanel />
+  <!-- Debug Panel (только в dev-режиме, 4.6) -->
+  <DebugPanel v-if="isDev" />
 </template>
 
 <script setup lang="ts">
@@ -144,6 +144,9 @@ import DiceView from './DiceView.vue';
 const gameStore = useGameStore();
 const diceStore = useDiceStore();
 const playerStore = usePlayerStore();
+
+/** 4.6: debug-панель нужна только при разработке. */
+const isDev = import.meta.env.DEV;
 
 /**
  * 1.1 Получить индекс первого игрока (с минимальным броском)

@@ -41,6 +41,30 @@ const playerStore = usePlayerStore();
   grid-row-gap: 0px;
 }
 
+/* 4.6 Адаптивность: доска масштабируется под экран телефона.
+   Портрет — по ширине, ландшафт телефона — по высоте (обе ориентации рабочие). */
+@media (max-width: 768px) {
+  .board {
+    width: min(100%, 600px);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    margin: 0 auto;
+  }
+  .board-main-cell::after {
+    display: none;
+  }
+}
+@media (orientation: landscape) and (max-height: 560px) {
+  .board {
+    width: auto;
+    height: min(92vh, 600px);
+    aspect-ratio: 1 / 1;
+  }
+  .board-main-cell::after {
+    display: none;
+  }
+}
+
 .corner-0 {
   grid-area: 15 / 15 / 23 / 23;
 }

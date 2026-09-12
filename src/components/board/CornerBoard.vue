@@ -38,9 +38,23 @@ const places = computed(() => {
 <style scoped>
 .corner {
   border: 1px solid var(--color);
+  /* 4.6: фишки базы — сеткой 2×2, чтобы помещались и выглядели крупнее. */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  place-items: center;
 }
 .corner.current {
   border: 3px solid var(--color);
   box-shadow: 0 0 8px 0 var(--color);
+}
+.corner :deep(.chip) {
+  width: 28px;
+  height: 28px;
+}
+@media (max-width: 768px), (orientation: landscape) and (max-height: 560px) {
+  .corner :deep(.chip) {
+    width: 20px;
+    height: 20px;
+  }
 }
 </style>

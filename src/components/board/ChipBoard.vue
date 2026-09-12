@@ -54,6 +54,13 @@ const isCaptured = computed(() => gameStore.lastCapturedChipId === props.chip.id
   }
 }
 
+@media (max-width: 768px), (orientation: landscape) and (max-height: 560px) {
+  .chip {
+    width: 13px;
+    height: 13px;
+  }
+}
+
 @keyframes chip-capture {
   0% {
     transform: scale(1);

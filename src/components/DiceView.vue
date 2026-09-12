@@ -110,6 +110,14 @@ const roll = () => {
   animation: dice-roll 0.35s ease-out;
 }
 
+@media (max-width: 768px), (orientation: landscape) and (max-height: 560px) {
+  .die {
+    width: 32px;
+    height: 32px;
+    padding: 3px;
+  }
+}
+
 @keyframes dice-roll {
   0% {
     transform: rotate(0deg) scale(0.7);

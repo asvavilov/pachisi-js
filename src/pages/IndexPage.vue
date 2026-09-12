@@ -1,12 +1,12 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="game-page q-pa-sm">
     <StartScreen v-if="game.stateId === GameStateEnum.START" />
 
-    <div v-else class="row">
-      <div class="col-auto">
+    <div v-else class="game-layout">
+      <div class="board-area">
         <MainBoard />
       </div>
-      <div class="col">
+      <div class="panel-area">
         <GamePanel />
       </div>
     </div>
@@ -28,4 +28,42 @@ const game = useGameStore();
 useAiDriver();
 </script>
 
-<style scoped></style>
+<style scoped>
+.game-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: center;
+}
+.board-area {
+  flex: 0 0 auto;
+}
+.panel-area {
+  flex: 1 1 320px;
+  min-width: 0;
+  max-width: 560px;
+}
+
+/* 4.6: портрет телефона — доска сверху, панель снизу */
+@media (max-width: 768px) {
+  .game-layout {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .panel-area {
+    max-width: none;
+  }
+}
+
+/* 4.6: ландшафт телефона — доска слева (по высоте), панель справа */
+@media (orientation: landscape) and (max-height: 560px) {
+  .game-layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .panel-area {
+    max-width: 420px;
+  }
+}
+</style>
