@@ -6,6 +6,7 @@
       [`board-${cell.board.type}-cell`]: cell.board.type !== undefined,
       [`cell-${cellIndex}`]: true,
       safe: !!cell.safe,
+      barrier: isCellBarrier(cell),
       highlighted: isCellHighlighted(cell),
     }"
     :style="{
@@ -26,6 +27,7 @@
 
 <script setup lang="ts">
 import type { Cell } from 'src/lib/cell';
+import { BoardType } from 'src/lib/board';
 import { Player, type PlayerIndex } from 'src/lib/player';
 import { useGameStore } from 'src/stores/game';
 import { usePlayerStore } from 'src/stores/player';
@@ -43,6 +45,14 @@ const playerStore = usePlayerStore();
 function isCellHighlighted(cell: Cell): boolean {
   // Store отдаёт целевые Cell — достаточно проверить вхождение.
   return gameStore.highlightedCells.includes(cell);
+}
+
+/**
+ * 4.7: барьер — две фишки одного цвета полностью занимают клетку основной доски
+ * (база и финишная дорожка барьером не считаются, README п.8, 9).
+ */
+function isCellBarrier(cell: Cell): boolean {
+  return cell.board.type === BoardType.main && gameStore.isCellBlocked(cell);
 }
 
 /**
@@ -66,6 +76,11 @@ function onCellClick() {
 .cell.safe {
   background-color: #ccc;
   border-color: var(--color);
+}
+
+.cell.barrier {
+  border: 2px solid #b71c1c;
+  box-shadow: inset 0 0 0 1px #b71c1c;
 }
 
 .cell.highlighted {

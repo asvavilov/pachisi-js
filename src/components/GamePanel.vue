@@ -73,6 +73,14 @@
         Следующий дубль вернёт последнюю двинутую фишку на базу (если она не на цветной дорожке)!
       </div>
     </div>
+
+    <!-- 4.7 Легенда индикации доски -->
+    <div class="legend text-caption q-mt-md">
+      <div class="legend-row"><span class="legend-box safe" /> безопасная клетка</div>
+      <div class="legend-row"><span class="legend-box barrier" /> барьер (2 фишки одного цвета)</div>
+      <div class="legend-row"><span class="legend-box current" /> база игрока, чей сейчас ход</div>
+      <div class="legend-row"><span class="legend-box target" /> доступные ходы выбранной фишки</div>
+    </div>
   </div>
 
   <q-card v-if="gameStore.selectedChip" class="q-mt-md selected-chip-panel">
@@ -161,5 +169,34 @@ const getFirstPlayerIndex = (): number => {
 .selected-chip-panel {
   background-color: #e8f4fd;
   border: 1px solid #b3d9ff;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend-box {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  border: 1px solid #999;
+}
+.legend-box.safe {
+  background-color: #ccc;
+}
+.legend-box.barrier {
+  border: 2px solid #b71c1c;
+}
+.legend-box.current {
+  border: 3px solid #ffb300;
+  box-shadow: 0 0 6px 0 #ffb300;
+}
+.legend-box.target {
+  border: 2px solid #000;
 }
 </style>

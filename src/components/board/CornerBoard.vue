@@ -1,7 +1,7 @@
 <template>
   <div
     class="corner"
-    :class="cornerClass"
+    :class="[cornerClass, { current: isCurrentPlayer }]"
     :style="{ '--color': playerStore.players[player.ind]!.color }"
   >
     <div v-for="(chip, placeIndex) in places" :key="placeIndex" class="place">
@@ -24,6 +24,11 @@ const playerStore = usePlayerStore();
 
 const cornerClass = computed(() => `corner-${props.player.ind}`);
 
+/** 4.7: подсветка базы игрока, чей сейчас ход. */
+const isCurrentPlayer = computed(
+  () => playerStore.current !== undefined && playerStore.current.ind === props.player.ind,
+);
+
 const places = computed(() => {
   if (!props.player) return [];
   // стартовые ячейки находятся в boards[0].cells[0].places
@@ -33,5 +38,9 @@ const places = computed(() => {
 <style scoped>
 .corner {
   border: 1px solid var(--color);
+}
+.corner.current {
+  border: 3px solid var(--color);
+  box-shadow: 0 0 8px 0 var(--color);
 }
 </style>
