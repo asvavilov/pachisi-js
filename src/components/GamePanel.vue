@@ -104,10 +104,7 @@
     <strong>Доступные фишки:</strong> {{ gameStore.movableChips.length }}
   </div>
 
-  <div v-if="gameStore.state.canFinishRoll" class="q-mt-md">
-    <strong>Нет доступных шагов.</strong>
-    <button @click="gameStore.nextPlayer">Завершить ход</button>
-  </div>
+  <!-- Ход при отсутствии возможных ходов переходит автоматически (README п.13). -->
 
   <!-- Debug Panel -->
   <DebugPanel />

@@ -4,12 +4,18 @@
 
 - [ ] Продумать архитектуру (ФП)
 - [ ] Разобраться с дублирующимся и лишним функционалом
-- [ ] Покрыть тестами `.vue`-компоненты и добавить интеграционные тесты полного игрового цикла (раздел 6 [`plans/testing-plan.md`](plans/testing-plan.md))
+- [x] Интеграционные тесты полного игрового цикла (раздел 6 [`plans/testing-plan.md`](plans/testing-plan.md))
+- [ ] Покрыть тестами `.vue`-компоненты
+- [ ] Реализовать ИИ ботов (игроки 1–3 помечены `ai: true`, но логики нет)
+- [ ] Экраны настройки партии и подведения итогов (места игроков)
+
+Актуальный план доработок до релиза — в [`PLANS.md`](PLANS.md).
 
 ## Тестирование
 
 - **Vitest** + `@vitest/coverage-v8`. Команды: `npm run test`, `npm run test:watch`, `npm run test:coverage`.
-- Покрытие игровой логики (`src/lib`, `src/stores`, `src/utils`): **96%+ statements, 88%+ branches**.
+- **237 тестов / 11 файлов** (unit + интеграционные).
+- Покрытие игровой логики (`src/lib`, `src/stores`, `src/utils`): **statements 96.61%, branches 89.55%, functions 98.18%, lines 97.2%**.
 - В [`vitest.config.ts`](vitest.config.ts) заданы пороги: statements 95, branches 85, functions 96, lines 95.
 - Подробный план — в [`plans/testing-plan.md`](plans/testing-plan.md).
 

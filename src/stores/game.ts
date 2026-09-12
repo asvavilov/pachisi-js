@@ -190,9 +190,14 @@ export const useGameStore = defineStore('game', () => {
         prepareAddonRollDice();
         stateId.value = GameStateEnum.WAIT_ROLL;
       } else {
-        debugLogPush('rollDice', 'Нет ходов → WAIT_PLAYER', 'warning');
-        //nextPlayer();
-        stateId.value = GameStateEnum.WAIT_PLAYER;
+        // README п.13: если ни одно значение кубиков не даёт допустимого хода,
+        // игрок ничего не делает и ход автоматически переходит к следующему.
+        debugLogPush(
+          'rollDice',
+          'Нет ходов → автопереход к следующему игроку (README п.13)',
+          'warning',
+        );
+        nextPlayer();
       }
     }
   };
@@ -409,7 +414,15 @@ export const useGameStore = defineStore('game', () => {
       movable.push(...getMovableChipsForSteps(step));
     }
     // Убрать дубликаты (одна фишка может быть доступна для нескольких шагов)
-    return Array.from(new Set(movable));
+    const unique = Array.from(new Set(movable));
+    // README п.8: при дубле и наличии барьера игрок обязан сдвинуть фишку барьера,
+    // если такое передвижение возможно. Иначе — обычные правила.
+    if (isBarrierMoveRequired.value) {
+      const barrier = new Set(getBarrierChips(playerStore.current!));
+      const barrierMoves = unique.filter((chip) => barrier.has(chip));
+      if (barrierMoves.length > 0) return barrierMoves;
+    }
+    return unique;
   };
 
   /**
@@ -715,6 +728,52 @@ export const useGameStore = defineStore('game', () => {
   };
 
   /**
+   * Найти фишки игрока, образующие барьер (README п.8): две фишки одного цвета
+   * на одной клетке, полностью занимающие её. База и дом не считаются барьером.
+   */
+  const getBarrierChips = (player: Player): Chip[] => {
+    const chips: Chip[] = [];
+    for (const chip of player.chips) {
+      const cell = chip.cell;
+      if (!cell || chip.finished) continue;
+      if (cell.board.type === BoardType.base || cell.board.type === BoardType.home) continue;
+      const occupied = cell.places.filter((p): p is Chip => p !== null);
+      if (occupied.length < 2 || occupied.length !== cell.places.length) continue;
+      if (!occupied.every((p) => p.player === chip.player)) continue;
+      chips.push(chip);
+    }
+    return chips;
+  };
+
+  /**
+   * README п.8: при дубле игрок обязан сдвинуть одну из фишек барьера,
+   * если такое передвижение возможно.
+   */
+  const isBarrierMoveRequired = computed(() => {
+    const player = playerStore.current;
+    if (!player || !diceStore.isEquals) return false;
+    return getBarrierChips(player).length > 0;
+  });
+
+  /**
+   * Завершить текущий ход после перемещения:
+   * - если ещё есть доступные ходы — WAIT_STEP;
+   * - если есть право на дополнительный бросок (дубль) — WAIT_ROLL;
+   * - иначе — автоматический переход хода (README п.13).
+   */
+  const advanceTurnAfterMove = () => {
+    if (hasMovableChips.value) {
+      stateId.value = GameStateEnum.WAIT_STEP;
+    } else if (diceStore.hasAddon || diceStore.isEquals) {
+      prepareAddonRollDice();
+      stateId.value = GameStateEnum.WAIT_ROLL;
+    } else {
+      debugLogPush('moveChip', 'Нет ходов → автопереход к следующему игроку (README п.13)', 'info');
+      nextPlayer();
+    }
+  };
+
+  /**
    * FIXME тут не надо проверок на возможность хода, они должны быть до вызова этого метода
    * FIXME бонус может совпадать с суммой кубиков, надо как-то отличать, чтобы правильно отмечать использование
    *
@@ -855,11 +914,31 @@ export const useGameStore = defineStore('game', () => {
       lastMovedChip.value = chip;
     }
 
-    stateId.value = hasMovableChips.value
-      ? GameStateEnum.WAIT_STEP
-      : diceStore.hasAddon || diceStore.isEquals
-        ? GameStateEnum.WAIT_ROLL
-        : GameStateEnum.WAIT_PLAYER;
+    // Проверка на финиш
+    let justFinished = false;
+    if (target.board.type === BoardType.home && target.board.player === chip.player) {
+      const finishBoard = target.board;
+      const lastCellIndex = finishBoard.cells.length - 1;
+      if (finishBoard.cells.indexOf(target) === lastCellIndex) {
+        chip.finish();
+        justFinished = true;
+        // 1.2 Бонус +10 за попадание в дом
+        addBonus(10);
+        debugLogPush('moveChip', `Фишка #${chip.id} финишировала! Бонус +10`, 'success', {
+          chipId: chip.id,
+        });
+        checkWinner(chip.player);
+      }
+    }
+
+    // README п.14: если игрок завершил все свои фишки, его ход заканчивается.
+    if (stateId.value !== GameStateEnum.FINISH) {
+      if (justFinished && playerStore.players[chip.player.ind]!.chips.every((c) => c.finished)) {
+        nextPlayer();
+      } else {
+        advanceTurnAfterMove();
+      }
+    }
 
     debugLogPush(
       'moveChip',
@@ -873,21 +952,6 @@ export const useGameStore = defineStore('game', () => {
       },
     );
 
-    // Проверка на финиш
-    if (target.board.type === BoardType.home && target.board.player === chip.player) {
-      const finishBoard = target.board;
-      const lastCellIndex = finishBoard.cells.length - 1;
-      if (finishBoard.cells.indexOf(target) === lastCellIndex) {
-        chip.finish();
-        // 1.2 Бонус +10 за попадание в дом
-        addBonus(10);
-        debugLogPush('moveChip', `Фишка #${chip.id} финишировала! Бонус +10`, 'success', {
-          chipId: chip.id,
-        });
-        checkWinner(chip.player);
-      }
-    }
-
     return true;
   };
 
@@ -900,11 +964,25 @@ export const useGameStore = defineStore('game', () => {
   };
 
   const checkWinner = (player: PlayerData) => {
-    // Проверить, не победил ли игрок
+    // Проверить, не победил ли игрок (пополняет список winners в порядке финиша)
     const isWinner = playerStore.checkWinner(player as Player);
     if (isWinner === player) {
-      // TODO пока только один победитель
-      stateId.value = GameStateEnum.FINISH;
+      debugLogPush(
+        'checkWinner',
+        `Игрок ${player.ind} (${player.color}) завершил партию, место: ${playerStore.winners.length}`,
+        'success',
+        { playerIndex: player.ind, place: playerStore.winners.length },
+      );
+      // README п.14: партия заканчивается, когда места распределены
+      // (остался один игрок) или когда продолжают только ИИ.
+      if (playerStore.isGameOver) {
+        stateId.value = GameStateEnum.FINISH;
+        debugLogPush(
+          'checkWinner',
+          `Партия завершена. Места: ${playerStore.places.map((p) => p.color).join(' > ')}`,
+          'success',
+        );
+      }
     }
   };
 
@@ -977,6 +1055,8 @@ export const useGameStore = defineStore('game', () => {
     isSafeCell,
     isCellBlocked,
     isCellDisabled,
+    getBarrierChips,
+    isBarrierMoveRequired,
     sendToStart,
     addBonus,
     checkWinner,

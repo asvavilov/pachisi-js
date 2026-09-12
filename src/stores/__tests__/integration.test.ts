@@ -102,13 +102,8 @@ describe('Интеграционные тесты — полный игрово�
     expect(chip.cell).toBe(targetCell);
     expect(diceStore.used).toContain(3);
 
-    // Шаг 4: Переход хода (нет доступных ходов для оставшихся кубиков)
-    // После хода на 3 остались кубики [4, 7] — проверим состояние
-    // Если есть ходы → WAIT_STEP, иначе → WAIT_PLAYER
-    if (game.stateId === GameStateEnum.WAIT_PLAYER) {
-      game.nextPlayer();
-      expect(game.stateId).toBe(GameStateEnum.WAIT_ROLL);
-    }
+    // Шаг 4: После хода на 3 остались кубики [4, 7] — есть доступные ходы → WAIT_STEP
+    expect(game.stateId).toBe(GameStateEnum.WAIT_STEP);
 
     // Шаг 5: Симулируем финиш — ставим все фишки игрока 0 в finished
     playerStore.players[0]!.chips.forEach((c) => c.finish());
@@ -367,8 +362,10 @@ describe('Интеграционные тесты — полный игрово�
     expect(playerStore.players[0]!.chips[2]!.cell?.board.type).toBe(BoardType.base);
     expect(playerStore.players[0]!.chips[3]!.cell?.board.type).toBe(BoardType.base);
 
-    // Использована сумма 5 (оба кубика)
-    expect(diceStore.used).toEqual([2, 3]);
+    // Ходов больше нет → автопереход к следующему игроку, кости сброшены (README п.13)
+    expect(game.stateId).toBe(GameStateEnum.WAIT_ROLL);
+    expect(playerStore.currentIndex).toBe(1);
+    expect(diceStore.used).toEqual([]);
   });
 
   // =================================================================
@@ -441,5 +438,54 @@ describe('Интеграционные тесты — полный игрово�
 
     // Кости сброшены после каждого перехода
     expect(diceStore.items).toEqual([]);
+  });
+
+  // =================================================================
+  // Интеграционный тест 11: Первый победитель — партия продолжается
+  // README п.14: остальные игроки разыгрывают 2–4 места
+  // =================================================================
+  it('11. После первого победителя партия продолжается, пока играет человек (README п.14)', () => {
+    const { game, playerStore } = setupGame();
+
+    game.stateId = GameStateEnum.WAIT_ROLL;
+    playerStore.init(1);
+
+    // ИИ-игрок 1 финиширует первым
+    playerStore.players[1]!.chips.forEach((c) => c.finish());
+    game.checkWinner(playerStore.players[1]!);
+
+    expect(playerStore.winners).toContain(playerStore.players[1]);
+    expect(game.stateId).not.toBe(GameStateEnum.FINISH);
+
+    // Ход переходит через победителя к следующему активному игроку
+    game.nextPlayer();
+    expect(playerStore.currentIndex).toBe(2);
+    expect(game.stateId).toBe(GameStateEnum.WAIT_ROLL);
+  });
+
+  // =================================================================
+  // Интеграционный тест 12: Барьер + дубль (README п.8)
+  // =================================================================
+  it('12. Барьер + дубль: обязателен ход фишкой барьера (README п.8)', () => {
+    const { game, playerStore, boardStore } = setupGame();
+
+    game.stateId = GameStateEnum.WAIT_ROLL;
+    playerStore.init(0);
+
+    const b0 = putOnMain(0, 0, 0, 10);
+    const b1 = putOnMain(0, 0, 1, 10);
+    const other = putOnMain(0, 0, 2, 30);
+
+    vi.restoreAllMocks();
+    mockRoll(3, 3);
+    game.rollDice();
+
+    expect(game.isBarrierMoveRequired).toBe(true);
+    expect(game.movableChips).toEqual(expect.arrayContaining([b0, b1]));
+    expect(game.movableChips).not.toContain(other);
+
+    // Ход фишкой барьера возможен и исполним
+    expect(game.moveChip(b0, 3, boardStore.board.cells[13]!)).toBe(true);
+    expect(b0.cell).toBe(boardStore.board.cells[13]);
   });
 });

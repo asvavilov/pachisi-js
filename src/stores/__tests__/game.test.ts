@@ -180,8 +180,9 @@ describe('game store', () => {
   // =================================================================
   describe('rollDice и дубли', () => {
     it('rollDice() в WAIT_ROLL обновляет dice', () => {
-      const { game, diceStore } = setupGame();
+      const { game, diceStore, playerStore, boardStore } = setupGame();
       game.stateId = GameStateEnum.WAIT_ROLL;
+      putOnMain(playerStore.players[0]!, boardStore.board, 0, 10);
       mockRoll(3, 4);
       game.rollDice();
       expect(diceStore.items.length).toBe(2);
@@ -243,12 +244,14 @@ describe('game store', () => {
       expect(game.stateId).toBe(GameStateEnum.WAIT_STEP);
     });
 
-    it('rollDice() без дубля и !hasMovableChips → WAIT_PLAYER', () => {
-      const { game } = setupGame();
+    it('rollDice() без дубля и !hasMovableChips → автопереход к следующему (README п.13)', () => {
+      const { game, playerStore } = setupGame();
       game.stateId = GameStateEnum.WAIT_ROLL;
+      playerStore.init(0);
       mockRoll(3, 4);
       game.rollDice();
-      expect(game.stateId).toBe(GameStateEnum.WAIT_PLAYER);
+      expect(game.stateId).toBe(GameStateEnum.WAIT_ROLL);
+      expect(playerStore.currentIndex).toBe(1);
     });
 
     it('Крайний случай: 3 дубля подряд, но нет фишек для отправки — не падает', () => {
@@ -564,8 +567,9 @@ describe('game store', () => {
       // Остальные фишки остаются в базе
       expect(player.chips[2]!.cell?.board.type).toBe(BoardType.base);
       expect(player.chips[3]!.cell?.board.type).toBe(BoardType.base);
-      // Использована сумма 5 (оба кубика [2,3])
-      expect(diceStore.used).toEqual([2, 3]);
+      // Ходов больше нет → автопереход, кости сброшены (README п.13)
+      expect(playerStore.currentIndex).toBe(1);
+      expect(diceStore.used).toEqual([]);
     });
   });
 
@@ -607,9 +611,11 @@ describe('game store', () => {
     });
 
     it('попадание в последнюю ячейку home → finish + бонус 10', () => {
-      const { game, playerStore, diceStore } = setupGame();
+      const { game, playerStore, boardStore, diceStore } = setupGame();
       playerStore.init(0);
       const chip = playerStore.players[0]!.chips[0]!;
+      // Вторая фишка на доске — чтобы после финиша бонус +10 было куда применить
+      putOnMain(playerStore.players[0]!, boardStore.board, 1, 10);
       chip.go(playerStore.players[0]!.homeBoard.cells[6]!);
       diceStore.items = [1, 4];
       const res = game.moveChip(chip, 1, playerStore.players[0]!.homeBoard.cells[7]!);
@@ -637,14 +643,15 @@ describe('game store', () => {
       expect(game.stateId).toBe(GameStateEnum.WAIT_ROLL);
     });
 
-    it('после хода без доп. ходов → WAIT_PLAYER', () => {
+    it('после хода без доп. ходов → автопереход к следующему (README п.13)', () => {
       const { game, playerStore, boardStore, diceStore } = setupGame();
       playerStore.init(0);
       const chip = putOnMain(playerStore.players[0]!, boardStore.board, 0, 10);
       diceStore.items = [3, 4];
       // Ход на сумму 7 использует оба кубика
       game.moveChip(chip, 7, boardStore.board.cells[17]!);
-      expect(game.stateId).toBe(GameStateEnum.WAIT_PLAYER);
+      expect(game.stateId).toBe(GameStateEnum.WAIT_ROLL);
+      expect(playerStore.currentIndex).toBe(1);
     });
 
     it('с недоступным steps → false', () => {
@@ -880,7 +887,7 @@ describe('game store', () => {
   // 4.4.9 Проверка победителя
   // =================================================================
   describe('checkWinner', () => {
-    it('при всех finished → FINISH', () => {
+    it('человек финишировал, остальные — ИИ → FINISH (README п.14)', () => {
       const { game, playerStore } = setupGame();
       playerStore.players[0]!.chips.forEach((c) => c.finish());
       game.checkWinner(playerStore.players[0]!);
@@ -894,11 +901,25 @@ describe('game store', () => {
       expect(game.stateId).toBe(GameStateEnum.WAIT_ROLL);
     });
 
-    it('Крайний случай: для ИИ-игрока', () => {
+    it('Крайний случай: ИИ-игрок финишировал, но партия продолжается (играет человек, README п.14)', () => {
       const { game, playerStore } = setupGame();
+      game.stateId = GameStateEnum.WAIT_ROLL;
       playerStore.players[1]!.chips.forEach((c) => c.finish());
       game.checkWinner(playerStore.players[1]!);
+      expect(playerStore.winners).toContain(playerStore.players[1]);
+      expect(game.stateId).not.toBe(GameStateEnum.FINISH);
+    });
+
+    it('завершение партии: последний оставшийся игрок занимает последнее место (README п.14)', () => {
+      const { game, playerStore } = setupGame();
+      game.stateId = GameStateEnum.WAIT_ROLL;
+      // Трое ИИ финишировали, человек 0 остаётся последним
+      for (const idx of [1, 2, 3] as const) {
+        playerStore.players[idx]!.chips.forEach((c) => c.finish());
+        game.checkWinner(playerStore.players[idx]!);
+      }
       expect(game.stateId).toBe(GameStateEnum.FINISH);
+      expect(playerStore.places.map((p) => p.ind)).toEqual([1, 2, 3, 0]);
     });
   });
 
@@ -968,6 +989,64 @@ describe('game store', () => {
       playerStore.init(0); // все фишки на базе
       diceStore.items = [3, 4]; // не дубль → доп. броска нет
       expect(game.canAddonRollDice).toBe(false);
+    });
+  });
+
+  // =================================================================
+  // 4.4.15 Барьер + дубль (README п.8)
+  // =================================================================
+  describe('барьер + дубль', () => {
+    it('getBarrierChips() находит две фишки одного цвета на одной клетке', () => {
+      const { game, playerStore, boardStore } = setupGame();
+      playerStore.init(0);
+      const c0 = putOnMain(playerStore.players[0]!, boardStore.board, 0, 10);
+      const c1 = putOnMain(playerStore.players[0]!, boardStore.board, 1, 10);
+      expect(game.getBarrierChips(playerStore.players[0]!)).toEqual(
+        expect.arrayContaining([c0, c1]),
+      );
+    });
+
+    it('isBarrierMoveRequired === false без дубля (README п.8)', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      playerStore.init(0);
+      putOnMain(playerStore.players[0]!, boardStore.board, 0, 10);
+      putOnMain(playerStore.players[0]!, boardStore.board, 1, 10);
+      expect(game.getBarrierChips(playerStore.players[0]!).length).toBe(2);
+      diceStore.items = [3, 4];
+      expect(game.isBarrierMoveRequired).toBe(false);
+    });
+
+    it('при дубле обязателен ход фишкой барьера — другие фишки недоступны (README п.8)', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      playerStore.init(0);
+      const b0 = putOnMain(playerStore.players[0]!, boardStore.board, 0, 10);
+      const b1 = putOnMain(playerStore.players[0]!, boardStore.board, 1, 10);
+      const other = putOnMain(playerStore.players[0]!, boardStore.board, 2, 30);
+      diceStore.items = [3, 3];
+      expect(game.isBarrierMoveRequired).toBe(true);
+      const movable = game.movableChips;
+      expect(movable).toContain(b0);
+      expect(movable).toContain(b1);
+      expect(movable).not.toContain(other);
+    });
+
+    it('если фишку барьера сдвинуть нельзя — доступны обычные ходы (README п.8)', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      playerStore.init(0);
+      // Барьер игрока 0 на клетке 10 перекрыт барьерами соперников на 11 и 12
+      putOnMain(playerStore.players[0]!, boardStore.board, 0, 10);
+      putOnMain(playerStore.players[0]!, boardStore.board, 1, 10);
+      putOnMain(playerStore.players[1]!, boardStore.board, 0, 11);
+      putOnMain(playerStore.players[1]!, boardStore.board, 1, 11);
+      putOnMain(playerStore.players[2]!, boardStore.board, 0, 12);
+      putOnMain(playerStore.players[2]!, boardStore.board, 1, 12);
+      // Свободная фишка игрока 0, которая может ходить
+      const other = putOnMain(playerStore.players[0]!, boardStore.board, 2, 30);
+
+      diceStore.items = [1, 1];
+      expect(game.isBarrierMoveRequired).toBe(true);
+      const movable = game.movableChips;
+      expect(movable).toContain(other);
     });
   });
 

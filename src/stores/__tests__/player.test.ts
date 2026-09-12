@@ -130,4 +130,76 @@ describe('player store', () => {
     store.init();
     expect(store.players[0]!.chips.every((c) => c.cell?.board.type === BoardType.base)).toBe(true);
   });
+
+  // ---- README п.14: места и завершение игры ----
+
+  it('next() пропускает игроков, завершивших партию', () => {
+    const store = usePlayerStore();
+    store.init(0);
+    store.players[1]!.chips.forEach((c) => c.finish());
+    store.checkWinner(store.players[1]!); // игрок 1 — winner
+    store.next();
+    expect(store.currentIndex).toBe(2);
+  });
+
+  it('next() возвращается к первому, если победителей несколько', () => {
+    const store = usePlayerStore();
+    store.init(2);
+    store.players[3]!.chips.forEach((c) => c.finish());
+    store.checkWinner(store.players[3]!);
+    store.players[0]!.chips.forEach((c) => c.finish());
+    store.checkWinner(store.players[0]!);
+    store.next();
+    expect(store.currentIndex).toBe(1);
+  });
+
+  it('activePlayers не содержит победителей', () => {
+    const store = usePlayerStore();
+    store.init();
+    store.players[0]!.chips.forEach((c) => c.finish());
+    store.checkWinner(store.players[0]!);
+    expect(store.activePlayers.map((p) => p.ind)).toEqual([1, 2, 3]);
+  });
+
+  it('isGameOver === false до появления победителя', () => {
+    const store = usePlayerStore();
+    store.init();
+    expect(store.isGameOver).toBe(false);
+  });
+
+  it('isGameOver === true, если остались только ИИ', () => {
+    const store = usePlayerStore();
+    store.init();
+    store.players[0]!.chips.forEach((c) => c.finish());
+    store.checkWinner(store.players[0]!);
+    expect(store.isGameOver).toBe(true);
+  });
+
+  it('isGameOver === false, пока играет человек', () => {
+    const store = usePlayerStore();
+    store.init();
+    store.players[1]!.chips.forEach((c) => c.finish());
+    store.checkWinner(store.players[1]!);
+    expect(store.isGameOver).toBe(false);
+  });
+
+  it('isGameOver === true, когда завершили все, кроме одного', () => {
+    const store = usePlayerStore();
+    store.init();
+    for (const idx of [1, 2, 3] as const) {
+      store.players[idx]!.chips.forEach((c) => c.finish());
+      store.checkWinner(store.players[idx]!);
+    }
+    expect(store.isGameOver).toBe(true);
+  });
+
+  it('places — победители в порядке финиша, затем последний игрок', () => {
+    const store = usePlayerStore();
+    store.init();
+    for (const idx of [2, 0, 3] as const) {
+      store.players[idx]!.chips.forEach((c) => c.finish());
+      store.checkWinner(store.players[idx]!);
+    }
+    expect(store.places.map((p) => p.ind)).toEqual([2, 0, 3, 1]);
+  });
 });

@@ -23,15 +23,49 @@ export const usePlayerStore = defineStore('player', () => {
     winners.value = [];
   };
 
+  /**
+   * Перейти к следующему игроку. Игроки, уже завершившие партию (winners),
+   * пропускаются — их фишки все в доме (README п.14).
+   */
   const next = () => {
-    if (currentIndex.value !== undefined) {
-      currentIndex.value = ((currentIndex.value + 1) % players.value.length) as PlayerIndex;
+    if (currentIndex.value === undefined) return;
+    const total = players.value.length;
+    for (let step = 1; step <= total; step++) {
+      const idx = ((currentIndex.value + step) % total) as PlayerIndex;
+      if (!winners.value.includes(players.value[idx]!)) {
+        currentIndex.value = idx;
+        return;
+      }
     }
   };
 
   const current = computed(() =>
     currentIndex.value !== undefined ? players.value[currentIndex.value] : undefined,
   );
+
+  /**
+   * Игроки, ещё не завершившие партию (не попавшие в winners).
+   */
+  const activePlayers = computed(() => players.value.filter((p) => !winners.value.includes(p)));
+
+  /**
+   * README п.14: партия завершена, когда завершили все, кроме одного
+   * (последний занимает последнее место), либо когда остались только ИИ
+   * (людям не с кем играть).
+   */
+  const isGameOver = computed(() => {
+    if (winners.value.length === 0) return false;
+    const active = activePlayers.value;
+    if (active.length <= 1) return true;
+    return active.every((p) => p.ai);
+  });
+
+  /**
+   * README п.14: итоговые места — в порядке финиша (winners),
+   * затем оставшиеся игроки. До завершения партии порядок активных игроков
+   * не является итоговым.
+   */
+  const places = computed(() => [...winners.value, ...activePlayers.value]);
 
   const allChipsOnBase = computed(() =>
     current.value
@@ -66,5 +100,8 @@ export const usePlayerStore = defineStore('player', () => {
     current,
     allChipsOnBase,
     checkWinner,
+    activePlayers,
+    isGameOver,
+    places,
   };
 });
