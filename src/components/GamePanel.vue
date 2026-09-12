@@ -44,7 +44,10 @@
     </div>
 
     <div>
-      <button @click="gameStore.rollDice()" :disabled="!gameStore.state.canRollDice">
+      <button
+        @click="gameStore.rollDice()"
+        :disabled="!gameStore.state.canRollDice || gameStore.isAiTurn"
+      >
         Бросить кости
       </button>
       <span class="q-ml-md">

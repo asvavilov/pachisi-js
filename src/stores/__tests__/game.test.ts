@@ -1007,6 +1007,14 @@ describe('game store', () => {
       game.onChipClick(null);
       expect(game.selectedChip).toBeNull();
     });
+
+    it('в SELECT_FIRST фишки недоступны, даже если выпала «5» (нет подсветки)', () => {
+      const { game, playerStore, diceStore } = setupGame();
+      diceStore.items = [2, 3]; // сумма 5 — возможен выход с базы
+      const chip = playerStore.players[0]!.chips[0]!;
+      expect(game.movableChips).toContain(chip);
+      expect(game.isChipAvailable(chip)).toBe(false);
+    });
   });
 
   // =================================================================

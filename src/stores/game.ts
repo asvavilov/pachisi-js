@@ -404,6 +404,9 @@ export const useGameStore = defineStore('game', () => {
 
   const isChipAvailable = (chip: Chip | null | undefined): boolean => {
     if (!chip) return false;
+    // README п.2: на этапе выбора первого игрока фишки ещё недоступны для хода
+    // (иначе выпавшая при броске «5» подсвечивает фишки как доступные).
+    if (stateId.value === GameStateEnum.SELECT_FIRST) return false;
     return availableChipIds.value.includes(chip.id);
   };
 
