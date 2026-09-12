@@ -16,7 +16,7 @@ export class Chip {
     /**
      * связь с игроком
      */
-    this.player = player as PlayerData;
+    this.player = player;
     /**
      * связь с ячейкой
      */

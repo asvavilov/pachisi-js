@@ -16,19 +16,19 @@ export const useBoardStore = defineStore('board', () => {
    * карта ячеек безопасности
    */
   const safes: Record<number, PlayerData | boolean> = {
-    4: toRaw(players[0]!) as PlayerData,
     11: true,
     16: true,
-    21: toRaw(players[1]!) as PlayerData,
     28: true,
     33: true,
-    38: toRaw(players[2]!) as PlayerData,
     45: true,
     50: true,
-    55: toRaw(players[3]!) as PlayerData,
     62: true,
     67: true,
   };
+  // Стартовые ячейки игроков безопасны для своего владельца.
+  for (const player of players) {
+    safes[player.i_begin] = toRaw(player);
+  }
 
   /**
    * карта ячеек-переходов
