@@ -15,10 +15,10 @@
 | Фреймворк           | [Vue 3](https://vuejs.org/) (Composition API)               |
 | Язык                | [TypeScript](https://www.typescriptlang.org/) (strict mode) |
 | UI-фреймворк        | [Quasar Framework](https://quasar.dev/) v2                  |
-| State management    | [Pinia](https://pinia.vuejs.org/) v3                        |
+| State management    | [Pinia](https://pinia.vuejs.org/) v4                        |
 | Интернационализация | [Vue I18n](https://vue-i18n.intlify.dev/) v11               |
-| Сборка              | Vite (через Quasar CLI)                                     |
-| Линтинг             | ESLint (flat config) + Prettier                             |
+| Сборка              | Vite 8 / Rolldown (через Quasar CLI / @quasar/app-vite v3)  |
+| Линтинг             | ESLint 10 (flat config) + Prettier                          |
 | Стилизация          | SCSS                                                        |
 
 ## Структура проекта
