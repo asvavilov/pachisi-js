@@ -598,6 +598,30 @@ describe('game store', () => {
       expect(game.currentBonusSteps).toEqual([]);
     });
 
+    it('бонус НЕ списывается, если шаг совпадает с суммой кубиков', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      playerStore.init(0);
+      const chip = putOnMain(playerStore.players[0]!, boardStore.board, 0, 10);
+      diceStore.items = [4, 6]; // сумма 10 совпадает с бонусом +10
+      game.currentBonusSteps = [10];
+      const res = game.moveChip(chip, 10, boardStore.board.cells[20]!);
+      expect(res).toBe(true);
+      // Списаны кубики (сумма), бонус +10 сохранён для отдельного хода
+      expect(diceStore.used).toEqual([4, 6]);
+      expect(game.currentBonusSteps).toEqual([10]);
+    });
+
+    it('нельзя встать на полностью занятую ячейку → false', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      playerStore.init(0);
+      const chip = putOnMain(playerStore.players[0]!, boardStore.board, 0, 10);
+      // Клетка 13 занята двумя фишками игрока 1 (барьер)
+      putOnMain(playerStore.players[1]!, boardStore.board, 0, 13);
+      putOnMain(playerStore.players[1]!, boardStore.board, 1, 13);
+      diceStore.items = [3, 4];
+      expect(game.moveChip(chip, 3, boardStore.board.cells[13]!)).toBe(false);
+    });
+
     it('захватывает чужую фишку → sendToStart + бонус 20', () => {
       const { game, playerStore, boardStore, diceStore } = setupGame();
       playerStore.init(0);

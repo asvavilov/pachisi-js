@@ -121,6 +121,42 @@ describe('Chip', () => {
     warnSpy.mockRestore();
   });
 
+  it('go() на заполненную ячейку возвращает false и НЕ меняет позицию фишки', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const board = new Board(BoardType.main, undefined, 1, undefined, undefined);
+    const cell = board.cells[0]!; // size=2
+    const c1 = new Chip(player, cell, 0);
+    const c2 = new Chip(player, cell, 1);
+    const origin = new Board(BoardType.base, player, 1, undefined, undefined, { 0: 4 });
+    const chip = new Chip(player, origin.cells[0]!, 0);
+
+    expect(chip.go(cell)).toBe(false);
+
+    // Фишка осталась в исходной ячейке и не «повисла» без места
+    expect(chip.cell).toBe(origin.cells[0]);
+    expect(rawAt(origin.cells[0]!, 0)).toBe(chip);
+    // Целевая ячейка не изменилась
+    expect(rawAt(cell, 0)).toBe(c1);
+    expect(rawAt(cell, 1)).toBe(c2);
+    warnSpy.mockRestore();
+  });
+
+  it('go() возвращает true при успешном переносе', () => {
+    const boardA = new Board(BoardType.base, player, 1, undefined, undefined, { 0: 4 });
+    const boardB = new Board(BoardType.main, undefined, 1, undefined, undefined);
+    const chip = new Chip(player, boardA.cells[0]!, 0);
+    expect(chip.go(boardB.cells[0]!)).toBe(true);
+  });
+
+  it('go() в ту же ячейку — true и позиция не меняется', () => {
+    const board = new Board(BoardType.main, undefined, 1, undefined, undefined);
+    const cell = board.cells[0]!;
+    const chip = new Chip(player, cell, 0);
+    expect(chip.go(cell)).toBe(true);
+    expect(chip.cell).toBe(cell);
+    expect(rawAt(cell, 0)).toBe(chip);
+  });
+
   it('go() когда фишки нет в places (idx<0) — всё равно переносит и добавляет', () => {
     const playerLocal = new Player(0, false, PlayerColor.yellow);
     const boardA = new Board(BoardType.base, playerLocal, 1, undefined, undefined, { 0: 4 });

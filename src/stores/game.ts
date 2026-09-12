@@ -775,58 +775,82 @@ export const useGameStore = defineStore('game', () => {
   };
 
   /**
-   * FIXME тут не надо проверок на возможность хода, они должны быть до вызова этого метода
-   * FIXME бонус может совпадать с суммой кубиков, надо как-то отличать, чтобы правильно отмечать использование
-   *
-   * Переместить фишку на steps шагов с использованием соответствующего кубика
-   * @param chip Фишка
-   * @param steps Количество шагов (должно соответствовать одному из доступных шагов)
-   * @param targetCell Целевая ячейка (если не указана, используется первый вариант из findTargetCellVariants)
+   * Результат проверки допустимости хода.
    */
-  const moveChip = (chip: Chip, steps: number, targetCell: Cell): boolean => {
-    // Проверяем, что выбранный шаг соответствует доступному кубику
-    const availableSteps = getAvailableSteps();
-    if (!availableSteps.includes(steps)) {
-      debugLogPush('moveChip', `Шаг ${steps} недоступен для фишки #${chip.id}`, 'error', {
-        chipId: chip.id,
-        steps,
-        availableSteps,
-      });
-      return false;
+  type MoveCheck = { ok: true } | { ok: false; reason: string };
+
+  /**
+   * Проверка допустимости хода вынесена из `moveChip`: UI может вызвать её заранее,
+   * а `moveChip` использует как защитную проверку перед изменением состояния.
+   */
+  const checkMove = (chip: Chip, steps: number, targetCell: Cell): MoveCheck => {
+    if (!getAvailableSteps().includes(steps)) {
+      return { ok: false, reason: `Шаг ${steps} недоступен для фишки #${chip.id}` };
     }
     // README п.5: на остальных (кроме базы и дома) клетках не более двух фишек.
     // Нельзя поставить фишку на полностью занятую целевую ячейку (на барьер или мост).
     if (!targetCell.places.some((p) => p === null)) {
-      debugLogPush(
-        'moveChip',
-        `Нельзя встать на полностью занятую ячейку (README п.5) для фишки #${chip.id}`,
-        'error',
-        { chipId: chip.id, steps, targetBoardType: targetCell.board.type },
-      );
-      return false;
+      return {
+        ok: false,
+        reason: `Нельзя встать на полностью занятую ячейку (README п.5) для фишки #${chip.id}`,
+      };
     }
-    // Определяем, является ли шаг бонусным (10 или 20)
+    return { ok: true };
+  };
+
+  /**
+   * Списать использованный шаг.
+   * Если шаг совпадает и с бонусом (+10/+20), и с суммой кубиков, приоритет отдаётся
+   * кубикам — бонус сохраняется, чтобы его можно было применить отдельно.
+   */
+  const consumeStep = (steps: number) => {
+    const unused = diceStore.unused;
+    const matchesDice = unused.includes(steps);
+    const matchesDiceSum = unused.length >= 2 && diceStore.unusedSum === steps;
     const bonusIndex = currentBonusSteps.value.indexOf(steps);
-    if (bonusIndex !== -1) {
+
+    if (bonusIndex !== -1 && !matchesDice && !matchesDiceSum) {
       // Используем бонусный шаг
       currentBonusSteps.value.splice(bonusIndex, 1);
       debugLogPush('moveChip', `Использован бонусный шаг +${steps}`, 'success', {
         steps,
         bonusType: steps === 20 ? 'capture' : 'finish',
       });
-    } else if (isPlusSevenActive.value && steps === 7) {
+      return;
+    }
+    if (isPlusSevenActive.value && steps === 7) {
       // README п.6: шаг «+7» соответствует одному кубику дубля (используем его напрямую)
       const dieValue = diceStore.unused[0];
       if (dieValue !== undefined) {
         diceStore.used.push(dieValue);
       }
       debugLogPush('moveChip', `Использован кубик ${steps} (правило «+7»)`, 'info', { steps });
-    } else {
-      diceStore.use(steps);
-      debugLogPush('moveChip', `Использован кубик ${steps}`, 'info', { steps });
+      return;
     }
+    diceStore.use(steps);
+    debugLogPush('moveChip', `Использован кубик ${steps}`, 'info', { steps });
+  };
 
-    // Если целевая ячейка не указана, используем первый вариант
+  /**
+   * Переместить фишку на steps шагов с использованием соответствующего кубика.
+   * Проверка хода — в `checkMove()`, списание шага — в `consumeStep()`.
+   * @param chip Фишка
+   * @param steps Количество шагов (должно соответствовать одному из доступных шагов)
+   * @param targetCell Целевая ячейка
+   */
+  const moveChip = (chip: Chip, steps: number, targetCell: Cell): boolean => {
+    const validation = checkMove(chip, steps, targetCell);
+    if (!validation.ok) {
+      debugLogPush('moveChip', validation.reason, 'error', {
+        chipId: chip.id,
+        steps,
+        targetBoardType: targetCell.board.type,
+      });
+      return false;
+    }
+    // Списываем использованный шаг (кубик / сумма / бонус)
+    consumeStep(steps);
+
     const target = targetCell;
 
     // README п.11: выход с базы на занятую стартовую клетку — «расплющивание»

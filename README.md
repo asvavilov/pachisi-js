@@ -14,8 +14,8 @@
 ## Тестирование
 
 - **Vitest** + `@vitest/coverage-v8`. Команды: `npm run test`, `npm run test:watch`, `npm run test:coverage`.
-- **237 тестов / 11 файлов** (unit + интеграционные).
-- Покрытие игровой логики (`src/lib`, `src/stores`, `src/utils`): **statements 96.61%, branches 89.55%, functions 98.18%, lines 97.2%**.
+- **243 теста / 11 файлов** (unit + интеграционные).
+- Покрытие игровой логики (`src/lib`, `src/stores`, `src/utils`): **statements 96.67%, branches 89.84%, functions 98.23%, lines 97.25%**.
 - В [`vitest.config.ts`](vitest.config.ts) заданы пороги: statements 95, branches 85, functions 96, lines 95.
 - Подробный план — в [`plans/testing-plan.md`](plans/testing-plan.md).
 
