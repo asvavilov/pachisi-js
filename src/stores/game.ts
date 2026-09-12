@@ -520,7 +520,9 @@ export const useGameStore = defineStore('game', () => {
         return variants;
       }
       const player = currentCell.board.player;
-      const ownChipsOnExit = exitCell.places.filter((p) => p && player && p.player === player);
+      const ownChipsOnExit = exitCell.places.filter(
+        (p) => p && player && p.player.ind === player.ind,
+      );
       if (ownChipsOnExit.length > 0) {
         return variants; // ячейка занята своей фишкой
       }
@@ -727,7 +729,7 @@ export const useGameStore = defineStore('game', () => {
     }
     // Ячейка полностью занята: барьер только при фишках одного цвета
     const firstColor = places[0]!.player;
-    return places.every((p) => p.player === firstColor);
+    return places.every((p) => p.player.ind === firstColor.ind);
   };
 
   /**
@@ -742,7 +744,7 @@ export const useGameStore = defineStore('game', () => {
       if (cell.board.type === BoardType.base || cell.board.type === BoardType.home) continue;
       const occupied = cell.places.filter((p): p is Chip => p !== null);
       if (occupied.length < 2 || occupied.length !== cell.places.length) continue;
-      if (!occupied.every((p) => p.player === chip.player)) continue;
+      if (!occupied.every((p) => p.player.ind === chip.player.ind)) continue;
       chips.push(chip);
     }
     return chips;
@@ -865,7 +867,7 @@ export const useGameStore = defineStore('game', () => {
     // Безопасная клетка (общая или стартовая) защищает стоящую на ней фишку от захвата,
     // а клетка с несколькими фишками (мост/барьер) — полная, поэтому сюда не попадает
     // (проверка заполненности выше возвращает false до захвата).
-    const otherChips = target.places.filter((p) => p && p.player !== chip.player);
+    const otherChips = target.places.filter((p) => p && p.player.ind !== chip.player.ind);
     if (otherChips.length > 0) {
       const victim = otherChips[0]!;
       const captureAllowed = !isSafeCell(target, victim.player);
@@ -943,7 +945,7 @@ export const useGameStore = defineStore('game', () => {
 
     // Проверка на финиш
     let justFinished = false;
-    if (target.board.type === BoardType.home && target.board.player === chip.player) {
+    if (target.board.type === BoardType.home && target.board.player?.ind === chip.player.ind) {
       const finishBoard = target.board;
       const lastCellIndex = finishBoard.cells.length - 1;
       if (finishBoard.cells.indexOf(target) === lastCellIndex) {

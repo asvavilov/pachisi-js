@@ -1,4 +1,3 @@
-import { reactive } from 'vue';
 import type { Board } from './board';
 import type { Chip } from './chip';
 import type { PlayerData } from './player';
@@ -35,11 +34,8 @@ export class Cell {
      */
     this.size = size || 2;
     /**
-     * места в ячейке
+     * места в ячейке (реактивность обеспечивается stores-обёрткой доски)
      */
-    this.places = reactive([]);
-    for (let i = 0; i < this.size; i++) {
-      this.places.push(null);
-    }
+    this.places = new Array<Chip | null>(this.size).fill(null);
   }
 }

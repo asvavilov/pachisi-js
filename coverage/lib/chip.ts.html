@@ -25,14 +25,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>28/28</span>
+                <span class='fraction'>21/21</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>11/11</span>
+                <span class='fraction'>8/8</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>25/25</span>
+                <span class='fraction'>19/19</span>
             </div>
         
             
@@ -139,14 +139,7 @@
 <a name='L74'></a><a href='#L74'>74</a>
 <a name='L75'></a><a href='#L75'>75</a>
 <a name='L76'></a><a href='#L76'>76</a>
-<a name='L77'></a><a href='#L77'>77</a>
-<a name='L78'></a><a href='#L78'>78</a>
-<a name='L79'></a><a href='#L79'>79</a>
-<a name='L80'></a><a href='#L80'>80</a>
-<a name='L81'></a><a href='#L81'>81</a>
-<a name='L82'></a><a href='#L82'>82</a>
-<a name='L83'></a><a href='#L83'>83</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L77'></a><a href='#L77'>77</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">7x</span>
@@ -164,7 +157,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3126x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -185,38 +177,34 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3126x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">457x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">520x</span>
-<span class="cline-any cline-yes">456x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">567x</span>
-<span class="cline-any cline-yes">452x</span>
-<span class="cline-any cline-yes">449x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">516x</span>
+<span class="cline-any cline-yes">455x</span>
 <span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">564x</span>
+<span class="cline-any cline-yes">452x</span>
+<span class="cline-any cline-yes">450x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">452x</span>
 <span class="cline-any cline-yes">452x</span>
 <span class="cline-any cline-yes">452x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -229,7 +217,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import type { Cell } from './cell';
 import type { Player, PlayerData } from './player';
-import { toRaw } from 'vue';
 &nbsp;
 let chipIdCounter = 0;
 &nbsp;
@@ -239,7 +226,6 @@ let chipIdCounter = 0;
 export class Chip {
   player: PlayerData;
   cell: Cell;
-  go: (to_cell: Cell) =&gt; boolean;
   readonly id: number;
   finished: boolean;
 &nbsp;
@@ -247,7 +233,7 @@ export class Chip {
     /**
      * связь с игроком
      */
-    this.player = toRaw(player) as PlayerData;
+    this.player = player as PlayerData;
     /**
      * связь с ячейкой
      */
@@ -261,44 +247,40 @@ export class Chip {
      * финишировала ли фишка (достигла последней ячейки финишной дорожки)
      */
     this.finished = false;
+  }
 &nbsp;
-    /**
-     * Механический переход фишки к ячейке (без проверки правил игры —
-     * их выполняет вызывающий код: `stores/game.ts`).
-     * Возвращает `false` и не меняет положение, если в целевой ячейке нет места.
-     */
-    this.go = (to_cell) =&gt; {
-      // Перенос в ту же ячейку — ничего не делаем.
-      if (to_cell === this.cell) {
-        return true;
-      }
-&nbsp;
-      // Сначала проверяем вместимость целевой ячейки, чтобы не удалять фишку
-      // из текущей ячейки при неудаче (иначе фишка «повиснет» без места).
-      const targetIndex = to_cell.places.findIndex((p) =&gt; p === null);
-      if (targetIndex === -1) {
-        console.warn(`[фишка ${this.id}] Нет свободных мест в ячейке!`);
-        return false;
-      }
-&nbsp;
-      // Освобождаем текущее место (с резервным поиском по id).
-      const idx = this.cell.places.findIndex((p) =&gt; toRaw(p) === this);
-      if (idx &gt;= 0) {
-        this.cell.places[idx] = null;
-      } else {
-        for (let i = 0; i &lt; this.cell.places.length; i++) {
-          const place = this.cell.places[i];
-          if (place &amp;&amp; (toRaw(place) === this || place.id === this.id)) {
-            this.cell.places[i] = null;
-            break;
-          }
-        }
-      }
-&nbsp;
-      this.cell = to_cell;
-      this.cell.places[targetIndex] = this;
+  /**
+   * Механический переход фишки к ячейке (без проверки правил игры —
+   * их выполняет вызывающий код: `stores/game.ts`).
+   * Возвращает `false` и не меняет положение, если в целевой ячейке нет места.
+   *
+   * Обычный метод (не стрелка): при вызове на reactive-прокси `this` — это прокси,
+   * поэтому изменения ячеек отслеживаются Vue без импорта реактивности в `lib/`.
+   */
+  go(to_cell: Cell): boolean {
+    // Перенос в ту же ячейку — ничего не делаем.
+    if (to_cell === this.cell) {
       return true;
-    };
+    }
+&nbsp;
+    // Сначала проверяем вместимость целевой ячейки, чтобы не удалять фишку
+    // из текущей ячейки при неудаче (иначе фишка «повиснет» без места).
+    const targetIndex = to_cell.places.findIndex((p) =&gt; p === null);
+    if (targetIndex === -1) {
+      console.warn(`[фишка ${this.id}] Нет свободных мест в ячейке!`);
+      return false;
+    }
+&nbsp;
+    // Освобождаем текущее место. Фишка уникальна по `id`, поэтому поиск по id
+    // работает и когда ячейка обёрнута в reactive-прокси (без `toRaw`).
+    const idx = this.cell.places.findIndex((p) =&gt; p !== null &amp;&amp; p.id === this.id);
+    if (idx &gt;= 0) {
+      this.cell.places[idx] = null;
+    }
+&nbsp;
+    this.cell = to_cell;
+    this.cell.places[targetIndex] = this;
+    return true;
   }
 &nbsp;
   /**
@@ -316,7 +298,7 @@ export class Chip {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-09-12T18:28:14.056Z
+                at 2026-09-12T18:33:44.159Z
             </div>
         <script src="../prettify.js"></script>
         <script>

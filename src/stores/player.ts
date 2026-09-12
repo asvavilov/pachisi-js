@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { computed, ref, toRaw } from 'vue';
+import { computed, ref } from 'vue';
 import type { PlayerIndex } from 'src/lib/player';
 import { Player, PlayerColor } from 'src/lib/player';
 import { BoardType } from 'src/lib/board';
@@ -32,7 +32,7 @@ export const usePlayerStore = defineStore('player', () => {
     for (const player of players.value) {
       for (const chip of player.chips) {
         const places = chip.cell.places;
-        const idx = places.findIndex((p) => p !== null && (toRaw(p) === chip || p.id === chip.id));
+        const idx = places.findIndex((p) => p !== null && p.id === chip.id);
         if (idx >= 0) places[idx] = null;
       }
     }

@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">95.5% </span>
+                <span class="strong">95.51% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>446/467</span>
+                <span class='fraction'>447/468</span>
             </div>
         
             
@@ -1248,7 +1248,9 @@
 <a name='L1183'></a><a href='#L1183'>1183</a>
 <a name='L1184'></a><a href='#L1184'>1184</a>
 <a name='L1185'></a><a href='#L1185'>1185</a>
-<a name='L1186'></a><a href='#L1186'>1186</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L1186'></a><a href='#L1186'>1186</a>
+<a name='L1187'></a><a href='#L1187'>1187</a>
+<a name='L1188'></a><a href='#L1188'>1188</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1629,9 +1631,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">124x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">112x</span>
+<span class="cline-any cline-yes">168x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">125x</span>
+<span class="cline-any cline-yes">313x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">433x</span>
@@ -1671,11 +1673,11 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">659x</span>
-<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">657x</span>
+<span class="cline-any cline-yes">653x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1770,7 +1772,9 @@
 <span class="cline-any cline-yes">23x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">428x</span>
+<span class="cline-any cline-yes">428x</span>
 <span class="cline-any cline-yes">856x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">428x</span>
 <span class="cline-any cline-yes">63x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1985,17 +1989,17 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">124x</span>
-<span class="cline-any cline-yes">100x</span>
-<span class="cline-any cline-yes">100x</span>
-<span class="cline-any cline-yes">400x</span>
-<span class="cline-any cline-yes">400x</span>
-<span class="cline-any cline-yes">330x</span>
-<span class="cline-any cline-yes">338x</span>
-<span class="cline-any cline-yes">169x</span>
-<span class="cline-any cline-yes">46x</span>
-<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">109x</span>
+<span class="cline-any cline-yes">109x</span>
+<span class="cline-any cline-yes">436x</span>
+<span class="cline-any cline-yes">436x</span>
+<span class="cline-any cline-yes">366x</span>
+<span class="cline-any cline-yes">376x</span>
+<span class="cline-any cline-yes">188x</span>
+<span class="cline-any cline-yes">71x</span>
+<span class="cline-any cline-yes">28x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">100x</span>
+<span class="cline-any cline-yes">109x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -2003,9 +2007,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">124x</span>
-<span class="cline-any cline-yes">245x</span>
-<span class="cline-any cline-yes">245x</span>
-<span class="cline-any cline-yes">95x</span>
+<span class="cline-any cline-yes">250x</span>
+<span class="cline-any cline-yes">250x</span>
+<span class="cline-any cline-yes">100x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -2955,7 +2959,9 @@ export const useGameStore = defineStore('game', () =&gt; {
         return variants;
       }
       const player = currentCell.board.player;
-      const ownChipsOnExit = exitCell.places.filter((p) =&gt; p &amp;&amp; player &amp;&amp; p.player === player);
+      const ownChipsOnExit = exitCell.places.filter(
+        (p) =&gt; p &amp;&amp; player &amp;&amp; p.player.ind === player.ind,
+      );
       if (ownChipsOnExit.length &gt; 0) {
         return variants; // ячейка занята своей фишкой
       }
@@ -3162,7 +3168,7 @@ export const useGameStore = defineStore('game', () =&gt; {
     }
     // Ячейка полностью занята: барьер только при фишках одного цвета
     const firstColor = places[0]!.player;
-    return places.every((p) =&gt; p.player === firstColor);
+    return places.every((p) =&gt; p.player.ind === firstColor.ind);
   };
 &nbsp;
   /**
@@ -3177,7 +3183,7 @@ export const useGameStore = defineStore('game', () =&gt; {
       if (cell.board.type === BoardType.base || cell.board.type === BoardType.home) continue;
       const occupied = cell.places.filter((p): p is Chip =&gt; p !== null);
       if (occupied.length &lt; 2 || occupied.length !== cell.places.length) continue;
-      if (!occupied.every((p) =&gt; p.player === chip.player)) continue;
+      if (!occupied.every((p) =&gt; p.player.ind === chip.player.ind)) continue;
       chips.push(chip);
     }
     return chips;
@@ -3300,7 +3306,7 @@ export const useGameStore = defineStore('game', () =&gt; {
     // Безопасная клетка (общая или стартовая) защищает стоящую на ней фишку от захвата,
     // а клетка с несколькими фишками (мост/барьер) — полная, поэтому сюда не попадает
     // (проверка заполненности выше возвращает false до захвата).
-    const otherChips = target.places.filter((p) =&gt; p &amp;&amp; p.player !== chip.player);
+    const otherChips = target.places.filter((p) =&gt; p &amp;&amp; p.player.ind !== chip.player.ind);
     if (otherChips.length &gt; 0) {
       const victim = otherChips[0]!;
       const captureAllowed = !isSafeCell(target, victim.player);
@@ -3378,7 +3384,7 @@ export const useGameStore = defineStore('game', () =&gt; {
 &nbsp;
     // Проверка на финиш
     let justFinished = false;
-    if (target.board.type === BoardType.home &amp;&amp; target.board.player === chip.player) {
+    if (target.board.type === BoardType.home &amp;&amp; target.board.player?.ind === chip.player.ind) {
       const finishBoard = target.board;
       const lastCellIndex = finishBoard.cells.length - 1;
       if (finishBoard.cells.indexOf(target) === lastCellIndex) {
@@ -3625,7 +3631,7 @@ export const useGameStore = defineStore('game', () =&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-09-12T18:28:14.056Z
+                at 2026-09-12T18:33:44.159Z
             </div>
         <script src="../prettify.js"></script>
         <script>

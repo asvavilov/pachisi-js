@@ -5,8 +5,8 @@ import type { Cell } from 'src/lib/cell';
 import { Chip } from 'src/lib/chip';
 import { Player, PlayerColor } from 'src/lib/player';
 
-// Cell.places — реактивный массив Vue: при доступе элементы возвращаются
-// как reactive-прокси. Поэтому для сравнения по ссылке используем toRaw.
+// В store-контексте элементы places могут возвращаться как reactive-прокси,
+// поэтому для сравнения по ссылке используем toRaw (в lib-тестах это no-op).
 const rawAt = (cell: Cell, i: number) => toRaw(cell.places[i]);
 
 describe('Chip', () => {
@@ -171,7 +171,7 @@ describe('Chip', () => {
     expect(boardA.cells[0]!.places[0]).toBeNull();
   });
 
-  it('go() fallback: находит фишку по id, если toRaw-сравнение не сработало', () => {
+  it('go() находит фишку по id (устойчиво к reactive-прокси места)', () => {
     const playerLocal = new Player(0, false, PlayerColor.yellow);
     const boardA = new Board(BoardType.base, playerLocal, 1, undefined, undefined, { 0: 4 });
     const boardB = new Board(BoardType.main, undefined, 1, undefined, undefined);

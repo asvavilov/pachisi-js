@@ -20,10 +20,10 @@
 >
 > | Метрика    | Общее  |
 > | ---------- | ------ |
-> | Statements | 96.11% |
-> | Branches   | 91.07% |
+> | Statements | 96.06% |
+> | Branches   | 90.97% |
 > | Functions  | 98.51% |
-> | Lines      | 96.87% |
+> | Lines      | 96.84% |
 >
 > - `src/lib/*` — 100% (кроме `ai.ts`: 94.18% statements / 91.8% branches — эвристики и оценка угроз).
 > - `src/stores/game.ts` — 94.88% statements / 88.93% branches (в т.ч. автопропуск хода, завершение партии, барьер + дубль, `checkMove`/`consumeStep`, `aiActOnce`).

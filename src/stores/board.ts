@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { Board, BoardType } from 'src/lib/board';
 import { lastElement, firstElement } from 'src/utils/array';
-import { computed, toRaw } from 'vue';
+import { computed, reactive, toRaw } from 'vue';
 import { usePlayerStore } from './player';
 import type { PlayerData } from 'src/lib/player';
 
@@ -50,9 +50,10 @@ export const useBoardStore = defineStore('board', () => {
   };
 
   /**
-   * общая глобальная доска
+   * общая глобальная доска.
+   * `reactive` — чтобы ячейки/места были отслеживаемы Vue (в lib реактивности нет).
    */
-  const board = new Board(BoardType.main, undefined, 68, safes, ios);
+  const board = reactive(new Board(BoardType.main, undefined, 68, safes, ios));
 
   /**
    * связь игроков с общей доской
