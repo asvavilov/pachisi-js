@@ -6,7 +6,8 @@ import { computed, ref } from 'vue';
  */
 export const useDiceStore = defineStore('dice', () => {
   const count: number = 2;
-  const outItem: number = 5;
+  // README п.4: выход с базы возможен по сумме двух кубиков, равной 5.
+  const BASE_EXIT_SUM = 5;
 
   const items = ref<number[]>([]);
   const used = ref<number[]>([]);
@@ -58,26 +59,15 @@ export const useDiceStore = defineStore('dice', () => {
 
   const unused = computed(() => diffByCount(items.value, used.value));
 
-  const isAllUsed = computed(() => {
-    return used.value.length > 0 ? used.value.length === items.value.length : undefined;
-  });
-
   const reset = () => {
     items.value = [];
     used.value = [];
   };
 
   // README п.4: выход с базы — по сумме двух кубиков, равной 5 (а не по «6»).
-  const hasStart = computed(() => sum.value === outItem);
+  const isOut = (steps: number) => steps === BASE_EXIT_SUM;
 
-  // README п.7 + адаптация: дополнительный бросок даёт дубль (а не «6»).
-  const hasAddon = computed(() => isEquals.value);
-
-  // README п.4: выход возможен, когда сумма двух кубиков равна 5.
-  const hasOut = computed(() => sum.value === outItem);
-
-  const isOut = (steps: number) => steps === outItem;
-
+  // README п.7: дубль даёт дополнительный бросок (а не «6»).
   const isEquals = computed(
     () => items.value.length > 0 && items.value.every((item) => item === items.value[0]),
   );
@@ -87,16 +77,12 @@ export const useDiceStore = defineStore('dice', () => {
   return {
     roll,
     reset,
-    hasStart,
-    hasAddon,
-    hasOut,
     isOut,
     isEquals,
     items,
     used,
     use,
     unused,
-    isAllUsed,
     sum,
     unusedSum,
     rolled,

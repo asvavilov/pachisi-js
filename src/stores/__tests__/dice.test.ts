@@ -44,35 +44,7 @@ describe('dice store', () => {
     expect(dice.isEquals).toBe(false);
   });
 
-  it('hasStart — true при сумме костей = 5 (выход с базы)', () => {
-    const dice = useDiceStore();
-    dice.items = [2, 3];
-    expect(dice.hasStart).toBe(true);
-    dice.items = [3, 4];
-    expect(dice.hasStart).toBe(false);
-  });
-
-  it('hasAddon — true при дубле (доп. бросок)', () => {
-    const dice = useDiceStore();
-    dice.items = [3, 3];
-    expect(dice.hasAddon).toBe(true);
-    dice.items = [3, 4];
-    expect(dice.hasAddon).toBe(false);
-  });
-
-  it('hasOut — true при сумме костей = 5 (выход возможен)', () => {
-    const dice = useDiceStore();
-    dice.items = [2, 3];
-    expect(dice.hasOut).toBe(true);
-    dice.items = [1, 4];
-    expect(dice.hasOut).toBe(true);
-    dice.items = [3, 4];
-    expect(dice.hasOut).toBe(false);
-    dice.items = [5, 1];
-    expect(dice.hasOut).toBe(false);
-  });
-
-  it('isOut(5) — true', () => {
+  it('isOut(5) — true (выход с базы по сумме 5, README п.4)', () => {
     const dice = useDiceStore();
     expect(dice.isOut(5)).toBe(true);
   });
@@ -110,25 +82,12 @@ describe('dice store', () => {
     expect(dice.unused).toEqual([4]);
   });
 
-  it('isAllUsed — undefined если used пуст', () => {
+  it('unusedSum — сумма неиспользованных кубиков', () => {
     const dice = useDiceStore();
     dice.items = [3, 4];
-    expect(dice.isAllUsed).toBeUndefined();
-  });
-
-  it('isAllUsed — true если все использованы', () => {
-    const dice = useDiceStore();
-    dice.items = [3, 4];
+    expect(dice.unusedSum).toBe(7);
     dice.use(3);
-    dice.use(4);
-    expect(dice.isAllUsed).toBe(true);
-  });
-
-  it('isAllUsed — false если не все', () => {
-    const dice = useDiceStore();
-    dice.items = [3, 4];
-    dice.use(3);
-    expect(dice.isAllUsed).toBe(false);
+    expect(dice.unusedSum).toBe(4);
   });
 
   it('rolled — false после reset', () => {

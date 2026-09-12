@@ -367,13 +367,9 @@ export const useGameStore = defineStore('game', () => {
   };
 
   /**
-   * дополнительный ход:
-   * - или когда дубли
-   * - или выпало 6 и все на базе
+   * README п.7: дополнительный бросок даёт только дубль.
    */
-  const canAddonRollDice = computed(() => {
-    return diceStore.isEquals || (playerStore.allChipsOnBase && diceStore.hasAddon);
-  });
+  const canAddonRollDice = computed(() => diceStore.isEquals);
 
   /**
    * README п.6: правило «+7».
@@ -771,7 +767,7 @@ export const useGameStore = defineStore('game', () => {
   const advanceTurnAfterMove = () => {
     if (hasMovableChips.value) {
       stateId.value = GameStateEnum.WAIT_STEP;
-    } else if (diceStore.hasAddon || diceStore.isEquals) {
+    } else if (diceStore.isEquals) {
       prepareAddonRollDice();
       stateId.value = GameStateEnum.WAIT_ROLL;
     } else {
