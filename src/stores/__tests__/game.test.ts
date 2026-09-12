@@ -101,6 +101,13 @@ describe('game store', () => {
       expect(diceStore.items).toEqual([]);
       expect(game.doublesCount).toBe(0);
     });
+
+    it('сбрасывает сигнал анимации захвата', () => {
+      const { game } = setupGame();
+      game.lastCapturedChipId = 42;
+      game.newGame();
+      expect(game.lastCapturedChipId).toBeNull();
+    });
   });
 
   // =================================================================
@@ -658,6 +665,7 @@ describe('game store', () => {
       expect(res).toBe(true);
       expect(victim.cell).toBe(playerStore.players[1]!.baseBoard.cells[0]);
       expect(game.currentBonusSteps).toEqual([20]);
+      expect(game.lastCapturedChipId).toBe(victim.id); // 4.5: сигнал анимации захвата
     });
 
     it('попадание в последнюю ячейку home → finish + бонус 10', () => {

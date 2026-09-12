@@ -50,15 +50,10 @@
         :disable="!gameStore.state.canRollDice || gameStore.isAiTurn"
         @click="gameStore.rollDice()"
       />
-      <span>
-        <template v-if="diceStore.rolled">
-          {{ diceStore.items.join(' + ') }} = {{ diceStore.sum }}
-          <span v-if="diceStore.used.length > 0"> (использовано: {{ usedDiceText }})</span>
-          <span v-if="gameStore.currentBonusSteps.length > 0" class="q-ml-md" style="color: green">
-            Бонусы доступны: {{ gameStore.currentBonusSteps.map((s) => `+${s}`).join(', ') }}
-          </span>
-        </template>
-        <template v-else-if="gameStore.state.canRollDice">Бросьте кости</template>
+      <DiceView />
+      <span v-if="!diceStore.rolled && gameStore.state.canRollDice">Бросьте кости</span>
+      <span v-if="gameStore.currentBonusSteps.length > 0" style="color: green">
+        Бонусы доступны: {{ gameStore.currentBonusSteps.map((s) => `+${s}`).join(', ') }}
       </span>
     </div>
 
@@ -77,9 +72,13 @@
     <!-- 4.7 Легенда индикации доски -->
     <div class="legend text-caption q-mt-md">
       <div class="legend-row"><span class="legend-box safe" /> безопасная клетка</div>
-      <div class="legend-row"><span class="legend-box barrier" /> барьер (2 фишки одного цвета)</div>
+      <div class="legend-row">
+        <span class="legend-box barrier" /> барьер (2 фишки одного цвета)
+      </div>
       <div class="legend-row"><span class="legend-box current" /> база игрока, чей сейчас ход</div>
-      <div class="legend-row"><span class="legend-box target" /> доступные ходы выбранной фишки</div>
+      <div class="legend-row">
+        <span class="legend-box target" /> доступные ходы выбранной фишки
+      </div>
     </div>
   </div>
 
@@ -139,16 +138,12 @@ import { GameStateEnum } from 'src/lib/GameState';
 import { useDiceStore } from 'src/stores/dice';
 import { useGameStore } from 'src/stores/game';
 import { usePlayerStore } from 'src/stores/player';
-import { computed } from 'vue';
 import DebugPanel from './DebugPanel.vue';
+import DiceView from './DiceView.vue';
 
 const gameStore = useGameStore();
 const diceStore = useDiceStore();
 const playerStore = usePlayerStore();
-
-const usedDiceText = computed(() => {
-  return diceStore.used.join(', ') || 'нет';
-});
 
 /**
  * 1.1 Получить индекс первого игрока (с минимальным броском)

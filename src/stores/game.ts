@@ -119,6 +119,11 @@ export const useGameStore = defineStore('game', () => {
   const lastMovedChip = ref<Chip | null>(null);
 
   /**
+   * 4.5: id последней сбитой фишки — для короткой анимации захвата.
+   */
+  const lastCapturedChipId = ref<number | null>(null);
+
+  /**
    * Сброс изменяемого состояния партии (без расстановки фишек).
    */
   const resetMatchState = () => {
@@ -130,6 +135,7 @@ export const useGameStore = defineStore('game', () => {
     doublesCount.value = 0;
     secondDoubleUsedForMove.value = false;
     lastMovedChip.value = null;
+    lastCapturedChipId.value = null;
     currentBonusSteps.value = [];
     selectedChip.value = null;
     clearDebugLog();
@@ -884,6 +890,7 @@ export const useGameStore = defineStore('game', () => {
               'success',
               { capturedChipId: otherChip.id, capturedColor: otherChip.player.color },
             );
+            lastCapturedChipId.value = otherChip.id;
             sendToStart(otherChip);
           }
         }
@@ -1159,6 +1166,7 @@ export const useGameStore = defineStore('game', () => {
     //availableChipIds,
     highlightedCells,
     selectedChip,
+    lastCapturedChipId,
     moveChip,
     getPossibleStepsForChip,
     findTargetCellVariants,
