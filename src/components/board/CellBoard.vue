@@ -6,7 +6,7 @@
       [`board-${cell.board.type}-cell`]: cell.board.type !== undefined,
       [`cell-${cellIndex}`]: true,
       safe: !!cell.safe,
-      highlighted: isCellHighlighted(cellIndex, cell),
+      highlighted: isCellHighlighted(cell),
     }"
     :style="{
       '--color':
@@ -25,7 +25,6 @@
 
 <script setup lang="ts">
 import type { Cell } from 'src/lib/cell';
-import { BoardType } from 'src/lib/board';
 import { Player, type PlayerIndex } from 'src/lib/player';
 import { useGameStore } from 'src/stores/game';
 import { usePlayerStore } from 'src/stores/player';
@@ -40,20 +39,9 @@ defineProps<{
 const gameStore = useGameStore();
 const playerStore = usePlayerStore();
 
-function isCellHighlighted(index: number, cell: Cell): boolean {
-  const isHomeBoard = cell.board.type === BoardType.home;
-  const highlightedIndices = gameStore.highlightedCellIndices;
-
-  if (isHomeBoard) {
-    // Подсвечиваем только на финишной дорожке игрока-владельца
-    // Для финишной доски проверяем индексы вида 1000 + playerInd * 100 + localIndex
-    const playerInd = cell.board.player?.ind;
-    if (playerInd === undefined) return false;
-    return highlightedIndices.includes(1000 + playerInd * 100 + index);
-  } else {
-    // Для основной доски проверяем обычные индексы
-    return highlightedIndices.includes(index);
-  }
+function isCellHighlighted(cell: Cell): boolean {
+  // Store отдаёт целевые Cell — достаточно проверить вхождение.
+  return gameStore.highlightedCells.includes(cell);
 }
 </script>
 <style scoped>

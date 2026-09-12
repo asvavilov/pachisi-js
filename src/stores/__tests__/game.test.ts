@@ -1075,31 +1075,31 @@ describe('game store', () => {
   });
 
   // =================================================================
-  // 4.4.13 highlightedCellIndices — подсветка целевых ячеек
+  // 4.4.13 highlightedCells — подсветка целевых ячеек
   // =================================================================
-  describe('highlightedCellIndices', () => {
+  describe('highlightedCells', () => {
     it('подсвечивает целевую ячейку на главной доске', () => {
       const { game, playerStore, boardStore, diceStore } = setupGame();
       const chip = putOnMain(playerStore.players[0]!, boardStore.board, 0, 10);
       diceStore.items = [3, 4];
       game.selectedChip = chip;
-      const indices = game.highlightedCellIndices;
+      const cells = game.highlightedCells;
       // С клетки 10 шаги 3/4/7 → ячейки 13/14/17 на главной доске.
-      expect(indices).toContain(13);
-      expect(indices).toContain(14);
-      expect(indices).toContain(17);
+      expect(cells).toContain(boardStore.board.cells[13]);
+      expect(cells).toContain(boardStore.board.cells[14]);
+      expect(cells).toContain(boardStore.board.cells[17]);
     });
 
-    it('подсвечивает ячейку на финишной доске со смещением 1000+', () => {
+    it('подсвечивает ячейку на финишной доске игрока', () => {
       const { game, playerStore, diceStore } = setupGame();
       playerStore.init(0);
       const chip = playerStore.players[0]!.chips[0]!;
       chip.go(playerStore.players[0]!.homeBoard.cells[2]!);
       diceStore.items = [2, 2]; // шаги 2/2/4 внутри home
       game.selectedChip = chip;
-      const indices = game.highlightedCellIndices;
-      // home[2]+2 → home[4] игрока 0 (1000 + 0 * 100 + 4)
-      expect(indices).toContain(1000 + 4);
+      const cells = game.highlightedCells;
+      // home[2]+2 → home[4] игрока 0
+      expect(cells).toContain(playerStore.players[0]!.homeBoard.cells[4]);
     });
 
     it('подсвечивает финишную дорожку только текущего игрока', () => {
@@ -1109,18 +1109,18 @@ describe('game store', () => {
       chip.go(playerStore.players[1]!.homeBoard.cells[2]!);
       diceStore.items = [2, 2]; // шаги 2/2/4 внутри home
       game.selectedChip = chip;
-      const indices = game.highlightedCellIndices;
-      // Дорожка игрока 1: home[4] → 1000 + 1 * 100 + 4
-      expect(indices).toContain(1000 + 100 + 4);
+      const cells = game.highlightedCells;
+      // Дорожка игрока 1
+      expect(cells).toContain(playerStore.players[1]!.homeBoard.cells[4]);
       // Не должно подсвечиваться на дорожках других игроков
-      expect(indices).not.toContain(1000 + 4);
-      expect(indices).not.toContain(1000 + 200 + 4);
-      expect(indices).not.toContain(1000 + 300 + 4);
+      expect(cells).not.toContain(playerStore.players[0]!.homeBoard.cells[4]);
+      expect(cells).not.toContain(playerStore.players[2]!.homeBoard.cells[4]);
+      expect(cells).not.toContain(playerStore.players[3]!.homeBoard.cells[4]);
     });
 
     it('пусто без выбранной фишки', () => {
       const { game } = setupGame();
-      expect(game.highlightedCellIndices).toEqual([]);
+      expect(game.highlightedCells).toEqual([]);
     });
   });
 

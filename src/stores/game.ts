@@ -9,7 +9,6 @@ import { GameStateEnum, GameStateTree } from 'src/lib/GameState';
 import type { Board } from 'src/lib/board';
 import { BoardType } from 'src/lib/board';
 import type { PlayerIndex, PlayerData } from 'src/lib/player';
-import { useBoardStore } from './board';
 
 /**
  * Запись в логе отладки
@@ -28,7 +27,6 @@ export interface DebugEntry {
 export const useGameStore = defineStore('game', () => {
   const playerStore = usePlayerStore();
   const diceStore = useDiceStore();
-  const boardStore = useBoardStore();
 
   /**
    * ид. текущего состояния игры
@@ -375,29 +373,16 @@ export const useGameStore = defineStore('game', () => {
 
   const availableChipIds = computed(() => movableChips.value.map((chip) => chip.id));
 
-  // Индексы ячеек для подсветки (целевые ячейки для выбранной фишки)
-  const highlightedCellIndices = computed(() => {
-    const indices: number[] = [];
-    if (!selectedChip.value) return indices;
-    const board = boardStore.board; // главная доска
+  // Целевые ячейки для подсветки (для выбранной фишки).
+  // Отдаём сами Cell, чтобы отображение просто проверяло вхождение
+  // и не знало о кодировании индексов/досок.
+  const highlightedCells = computed<Cell[]>(() => {
+    if (!selectedChip.value) return [];
+    const cells: Cell[] = [];
     for (const step of getPossibleStepsForChip(selectedChip.value)) {
-      const targetCells = findTargetCellVariants(selectedChip.value.cell, step);
-      for (const targetCell of targetCells) {
-        if (targetCell.board === board) {
-          const idx = board.cells.indexOf(targetCell);
-          if (idx !== -1) indices.push(idx);
-        } else if (targetCell.board.type === BoardType.home) {
-          // Подсвечиваем ячейки на финишной доске игрока
-          const idx = targetCell.board.cells.indexOf(targetCell);
-          const playerInd = targetCell.board.player?.ind;
-          if (idx !== -1 && playerInd !== undefined) {
-            // Смещение 1000 + playerInd * 100 + idx, чтобы отличать дорожки игроков
-            indices.push(1000 + playerInd * 100 + idx);
-          }
-        }
-      }
+      cells.push(...findTargetCellVariants(selectedChip.value.cell, step));
     }
-    return indices;
+    return cells;
   });
 
   const isChipAvailable = (chip: Chip | null | undefined): boolean => {
@@ -1049,7 +1034,7 @@ export const useGameStore = defineStore('game', () => {
     rollDice,
     onChipClick,
     //availableChipIds,
-    highlightedCellIndices,
+    highlightedCells,
     selectedChip,
     moveChip,
     getPossibleStepsForChip,
