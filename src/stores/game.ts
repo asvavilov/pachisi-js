@@ -387,11 +387,12 @@ export const useGameStore = defineStore('game', () => {
           const idx = board.cells.indexOf(targetCell);
           if (idx !== -1) indices.push(idx);
         } else if (targetCell.board.type === BoardType.home) {
-          // Подсвечиваем ячейки на финишной доске
+          // Подсвечиваем ячейки на финишной доске игрока
           const idx = targetCell.board.cells.indexOf(targetCell);
-          if (idx !== -1) {
-            // Добавляем смещение для уникальности (используем отрицательные индексы или большое смещение)
-            indices.push(1000 + idx);
+          const playerInd = targetCell.board.player?.ind;
+          if (idx !== -1 && playerInd !== undefined) {
+            // Смещение 1000 + playerInd * 100 + idx, чтобы отличать дорожки игроков
+            indices.push(1000 + playerInd * 100 + idx);
           }
         }
       }

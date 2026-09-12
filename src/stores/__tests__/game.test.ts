@@ -1074,8 +1074,24 @@ describe('game store', () => {
       diceStore.items = [2, 2]; // шаги 2/2/4 внутри home
       game.selectedChip = chip;
       const indices = game.highlightedCellIndices;
-      // home[2]+2 → home[4] (индекс 4 → 1000+4)
+      // home[2]+2 → home[4] игрока 0 (1000 + 0 * 100 + 4)
       expect(indices).toContain(1000 + 4);
+    });
+
+    it('подсвечивает финишную дорожку только текущего игрока', () => {
+      const { game, playerStore, diceStore } = setupGame();
+      playerStore.init(1);
+      const chip = playerStore.players[1]!.chips[0]!;
+      chip.go(playerStore.players[1]!.homeBoard.cells[2]!);
+      diceStore.items = [2, 2]; // шаги 2/2/4 внутри home
+      game.selectedChip = chip;
+      const indices = game.highlightedCellIndices;
+      // Дорожка игрока 1: home[4] → 1000 + 1 * 100 + 4
+      expect(indices).toContain(1000 + 100 + 4);
+      // Не должно подсвечиваться на дорожках других игроков
+      expect(indices).not.toContain(1000 + 4);
+      expect(indices).not.toContain(1000 + 200 + 4);
+      expect(indices).not.toContain(1000 + 300 + 4);
     });
 
     it('пусто без выбранной фишки', () => {
