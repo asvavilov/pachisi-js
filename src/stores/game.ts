@@ -1040,6 +1040,21 @@ export const useGameStore = defineStore('game', () => {
   };
 
   /**
+   * Переместить выбранную фишку в указанную (подсвеченную) целевую ячейку.
+   * Подбирает подходящий шаг из доступных (4.8: ход кликом по ячейке).
+   */
+  const moveSelectedChipToCell = (targetCell: Cell): boolean => {
+    const chip = selectedChip.value;
+    if (!chip) return false;
+    for (const step of getPossibleStepsForChip(chip)) {
+      if (findTargetCellVariants(chip.cell, step).includes(targetCell)) {
+        return moveChip(chip, step, targetCell);
+      }
+    }
+    return false;
+  };
+
+  /**
    * Все легальные варианты хода текущего игрока.
    * Единый источник и для UI, и для ИИ — правила уже применены.
    */
@@ -1152,6 +1167,7 @@ export const useGameStore = defineStore('game', () => {
     hasMovableChips,
     nextPlayer,
     isChipAvailable,
+    moveSelectedChipToCell,
     // 1.1 Этап выбора первого игрока
     firstRollPlayerIndex,
     firstRollResults,

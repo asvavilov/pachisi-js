@@ -16,6 +16,7 @@
             ? cell.safe.color
             : '#ccc',
     }"
+    @click="onCellClick"
   >
     <template v-for="placeNum in cell.size" :key="placeNum">
       <ChipBoard v-if="cell.places[placeNum - 1]" :chip="cell.places[placeNum - 1]!" />
@@ -30,7 +31,7 @@ import { useGameStore } from 'src/stores/game';
 import { usePlayerStore } from 'src/stores/player';
 import ChipBoard from './ChipBoard.vue';
 
-defineProps<{
+const props = defineProps<{
   cell: Cell;
   cellIndex: number;
   playerIndex?: PlayerIndex;
@@ -42,6 +43,15 @@ const playerStore = usePlayerStore();
 function isCellHighlighted(cell: Cell): boolean {
   // Store отдаёт целевые Cell — достаточно проверить вхождение.
   return gameStore.highlightedCells.includes(cell);
+}
+
+/**
+ * 4.8: клик по подсвеченной ячейке — ход выбранной фишкой.
+ */
+function onCellClick() {
+  if (isCellHighlighted(props.cell)) {
+    gameStore.moveSelectedChipToCell(props.cell);
+  }
 }
 </script>
 <style scoped>
@@ -60,5 +70,6 @@ function isCellHighlighted(cell: Cell): boolean {
 
 .cell.highlighted {
   border-color: #000;
+  cursor: pointer;
 }
 </style>

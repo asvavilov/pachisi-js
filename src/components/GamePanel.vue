@@ -43,14 +43,14 @@
       </div>
     </div>
 
-    <div>
-      <button
+    <div class="row items-center q-gutter-sm q-mt-sm">
+      <q-btn
+        color="primary"
+        label="Бросить кости"
+        :disable="!gameStore.state.canRollDice || gameStore.isAiTurn"
         @click="gameStore.rollDice()"
-        :disabled="!gameStore.state.canRollDice || gameStore.isAiTurn"
-      >
-        Бросить кости
-      </button>
-      <span class="q-ml-md">
+      />
+      <span>
         <template v-if="diceStore.rolled">
           {{ diceStore.items.join(' + ') }} = {{ diceStore.sum }}
           <span v-if="diceStore.used.length > 0"> (использовано: {{ usedDiceText }})</span>
@@ -75,34 +75,46 @@
     </div>
   </div>
 
-  <div v-if="gameStore.selectedChip" class="q-mt-md selected-chip-panel">
-    <strong>Выбрана фишка</strong> (доска: {{ gameStore.selectedChip.cell?.board.type }})
-    <div
-      v-for="step in gameStore.getPossibleStepsForChip(gameStore.selectedChip)"
-      :key="step"
-      class="q-mt-md"
-    >
-      <div class="text-subtitle2 q-mb-xs">Ход на {{ step }}:</div>
+  <q-card v-if="gameStore.selectedChip" class="q-mt-md selected-chip-panel">
+    <q-card-section>
+      <strong>Выбрана фишка</strong> (доска: {{ gameStore.selectedChip.cell?.board.type }})
       <div
-        v-for="(targetCell, idx) in gameStore.findTargetCellVariants(
-          gameStore.selectedChip.cell,
-          step,
-        )"
-        :key="idx"
-        class="q-mt-xs"
+        v-for="step in gameStore.getPossibleStepsForChip(gameStore.selectedChip)"
+        :key="step"
+        class="q-mt-md"
       >
-        <button @click="gameStore.moveChip(gameStore.selectedChip, step, targetCell)">
-          Двинуть на {{ step }}
-          <template v-if="targetCell.board.type === BoardType.home">
-            (на финиш, ячейка
-            {{ targetCell.board.cells.indexOf(targetCell) + 1 }})
-          </template>
-          <template v-else> (по основной доске) </template>
-        </button>
+        <div class="text-subtitle2 q-mb-xs">Ход на {{ step }}:</div>
+        <div
+          v-for="(targetCell, idx) in gameStore.findTargetCellVariants(
+            gameStore.selectedChip.cell,
+            step,
+          )"
+          :key="idx"
+          class="q-mt-xs"
+        >
+          <q-btn
+            color="primary"
+            size="sm"
+            @click="gameStore.moveChip(gameStore.selectedChip, step, targetCell)"
+          >
+            Двинуть на {{ step }}
+            <template v-if="targetCell.board.type === BoardType.home">
+              (на финиш, ячейка
+              {{ targetCell.board.cells.indexOf(targetCell) + 1 }})
+            </template>
+            <template v-else> (по основной доске) </template>
+          </q-btn>
+        </div>
       </div>
-    </div>
-    <button @click="gameStore.selectedChip = null">Отмена</button>
-  </div>
+      <q-btn
+        flat
+        color="grey-8"
+        label="Отмена"
+        class="q-mt-md"
+        @click="gameStore.selectedChip = null"
+      />
+    </q-card-section>
+  </q-card>
   <div v-else class="q-mt-md">
     <strong>Доступные фишки:</strong> {{ gameStore.movableChips.length }}
   </div>
@@ -146,23 +158,8 @@ const getFirstPlayerIndex = (): number => {
 </script>
 
 <style scoped>
-button {
-  margin: 4px;
-  padding: 8px 12px;
-  background-color: #1976d2;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
 .selected-chip-panel {
   background-color: #e8f4fd;
-  padding: 12px;
-  border-radius: 8px;
   border: 1px solid #b3d9ff;
 }
 </style>

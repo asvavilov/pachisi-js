@@ -1018,6 +1018,42 @@ describe('game store', () => {
   });
 
   // =================================================================
+  // 4.8 Ход кликом по подсвеченной ячейке
+  // =================================================================
+  describe('moveSelectedChipToCell', () => {
+    it('перемещает выбранную фишку в подсвеченную целевую ячейку', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      game.stateId = GameStateEnum.WAIT_ROLL;
+      const chip = putOnMain(playerStore.players[0]!, boardStore.board, 0, 10);
+      diceStore.items = [3, 4];
+      game.onChipClick(chip);
+      expect(game.selectedChip).toBe(chip);
+
+      const moved = game.moveSelectedChipToCell(boardStore.board.cells[13]!);
+
+      expect(moved).toBe(true);
+      expect(chip.cell).toBe(boardStore.board.cells[13]);
+      expect(game.selectedChip).toBeNull();
+    });
+
+    it('без выбранной фишки — false', () => {
+      const { game, boardStore } = setupGame();
+      expect(game.moveSelectedChipToCell(boardStore.board.cells[13]!)).toBe(false);
+    });
+
+    it('нецелевая ячейка — false, фишка не двигается', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      game.stateId = GameStateEnum.WAIT_ROLL;
+      const chip = putOnMain(playerStore.players[0]!, boardStore.board, 0, 10);
+      diceStore.items = [3, 4];
+      game.onChipClick(chip);
+
+      expect(game.moveSelectedChipToCell(boardStore.board.cells[50]!)).toBe(false);
+      expect(chip.cell).toBe(boardStore.board.cells[10]);
+    });
+  });
+
+  // =================================================================
   // 4.4.11 nextPlayer — смена хода
   // =================================================================
   describe('nextPlayer', () => {
