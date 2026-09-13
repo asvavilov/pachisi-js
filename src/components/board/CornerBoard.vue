@@ -7,6 +7,11 @@
     <div v-for="(chip, placeIndex) in places" :key="placeIndex" class="place">
       <ChipBoard v-if="chip" :chip="chip" />
     </div>
+
+    <!-- 4.7: кости/кнопка броска текущего игрока — на его базе (экономия места в панели). -->
+    <div v-if="isCurrentPlayer" class="base-dice">
+      <BoardDice />
+    </div>
   </div>
 </template>
 
@@ -15,6 +20,7 @@ import { computed } from 'vue';
 import { usePlayerStore } from 'src/stores/player';
 import type { Player } from 'src/lib/player';
 import ChipBoard from './ChipBoard.vue';
+import BoardDice from './BoardDice.vue';
 
 const props = defineProps<{
   player: Player;
@@ -38,10 +44,51 @@ const places = computed(() => {
 <style scoped>
 .corner {
   border: 1px solid var(--color);
-  /* 4.6: фишки базы — сеткой 2×2, чтобы помещались и выглядели крупнее. */
+  position: relative;
+  /* 4.6: фишки базы — по углам сетки 2×2, центр свободен под кости/бонусы. */
   display: grid;
   grid-template-columns: 1fr 1fr;
-  place-items: center;
+  grid-template-rows: 1fr 1fr;
+  padding: 2px;
+  box-sizing: border-box;
+}
+.place:nth-child(1) {
+  justify-self: start;
+  align-self: start;
+}
+.place:nth-child(2) {
+  justify-self: end;
+  align-self: start;
+}
+.place:nth-child(3) {
+  justify-self: start;
+  align-self: end;
+}
+.place:nth-child(4) {
+  justify-self: end;
+  align-self: end;
+}
+.base-dice {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  /* Оверлей не должен перехватывать тапы — иначе нельзя выбрать фишки базы. */
+  pointer-events: none;
+}
+/* Кликабельной оставляем только кнопку броска. */
+.base-dice :deep(.q-btn) {
+  pointer-events: auto;
+}
+.base-dice :deep(.die) {
+  width: 28px;
+  height: 28px;
+  padding: 3px;
+}
+.base-dice :deep(.text-h6) {
+  font-size: 0.9rem;
 }
 .corner.current {
   border: 3px solid var(--color);

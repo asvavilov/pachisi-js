@@ -1,7 +1,6 @@
 <template>
   <div class="info-panel q-pa-md q-mb-md" style="background-color: #f0f0f0; border-radius: 8px">
-    <div class="text-h6">Ход игры</div>
-    <div>{{ gameStore.stateId }}</div>
+    <div class="text-subtitle2"><strong>Ход игры:</strong> {{ gameStore.stateId }}</div>
 
     <!-- 1.1 Этап выбора первого игрока -->
     <div v-if="gameStore.stateId === GameStateEnum.SELECT_FIRST" class="q-mt-md">
@@ -30,31 +29,9 @@
       </div>
     </div>
 
-    <!-- Текущий игрок (не показываем на этапе SELECT_FIRST) -->
-    <div
-      v-if="gameStore.stateId !== GameStateEnum.SELECT_FIRST"
-      class="row items-center q-gutter-lg"
-    >
-      <div v-if="playerStore.current">
-        <strong>Текущий игрок:</strong>
-        <span class="q-ml-sm" :style="{ color: playerStore.current.color }">
-          {{ playerStore.current.color }} (игрок {{ playerStore.current.ind }})
-        </span>
-      </div>
-    </div>
-
-    <div class="row items-center q-gutter-sm q-mt-sm">
-      <q-btn
-        color="primary"
-        label="Бросить кости"
-        :disable="!gameStore.state.canRollDice || gameStore.isAiTurn"
-        @click="gameStore.rollDice()"
-      />
-      <DiceView />
-      <span v-if="!diceStore.rolled && gameStore.state.canRollDice">Бросьте кости</span>
-      <span v-if="gameStore.currentBonusSteps.length > 0" style="color: green">
-        Бонусы доступны: {{ gameStore.currentBonusSteps.map((s) => `+${s}`).join(', ') }}
-      </span>
+    <!-- 4.7: доступные фишки — компактно, вместо отдельного низа панели -->
+    <div v-else class="q-mt-xs">
+      Доступные фишки: <strong>{{ gameStore.movableChips.length }}</strong>
     </div>
 
     <!-- 1.3 Отображение счётчика дублей -->
@@ -75,7 +52,6 @@
       <div class="legend-row">
         <span class="legend-box barrier" /> барьер (2 фишки одного цвета)
       </div>
-      <div class="legend-row"><span class="legend-box current" /> база игрока, чей сейчас ход</div>
       <div class="legend-row">
         <span class="legend-box target" /> доступные ходы выбранной фишки
       </div>
@@ -122,9 +98,6 @@
       />
     </q-card-section>
   </q-card>
-  <div v-else class="q-mt-md">
-    <strong>Доступные фишки:</strong> {{ gameStore.movableChips.length }}
-  </div>
 
   <!-- Ход при отсутствии возможных ходов переходит автоматически (README п.13). -->
 
@@ -135,14 +108,11 @@
 <script setup lang="ts">
 import { BoardType } from 'src/lib/board';
 import { GameStateEnum } from 'src/lib/GameState';
-import { useDiceStore } from 'src/stores/dice';
 import { useGameStore } from 'src/stores/game';
 import { usePlayerStore } from 'src/stores/player';
 import DebugPanel from './DebugPanel.vue';
-import DiceView from './DiceView.vue';
 
 const gameStore = useGameStore();
-const diceStore = useDiceStore();
 const playerStore = usePlayerStore();
 
 /** 4.6: debug-панель нужна только при разработке. */
@@ -189,10 +159,6 @@ const getFirstPlayerIndex = (): number => {
 }
 .legend-box.barrier {
   border: 2px solid #b71c1c;
-}
-.legend-box.current {
-  border: 3px solid #ffb300;
-  box-shadow: 0 0 6px 0 #ffb300;
 }
 .legend-box.target {
   border: 2px solid #000;
