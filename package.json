@@ -1,8 +1,8 @@
 {
-  "name": "pachisi",
+  "name": "parchis",
   "version": "1.0.0",
-  "description": "pachisi board game",
-  "productName": "Pachisi",
+  "description": "parchis board game",
+  "productName": "Parchis",
   "author": "asvavilov <vavilov.rf@gmail.com>",
   "type": "module",
   "private": true,
