@@ -1,5 +1,5 @@
 <template>
-  <q-page class="game-page q-pa-sm">
+  <q-page class="game-page">
     <StartScreen v-if="game.stateId === GameStateEnum.START" />
 
     <div v-else class="game-layout">
@@ -29,6 +29,14 @@ useAiDriver();
 </script>
 
 <style scoped>
+/* 9.5: edge-to-edge на Android (targetSdk 36). Capacitor SystemBars прокидывает
+   --safe-area-inset-*; на веб-платформе они не заданы — fallback 0px. */
+.game-page {
+  padding: calc(var(--safe-area-inset-top, 0px) + 8px)
+    calc(var(--safe-area-inset-right, 0px) + 8px)
+    calc(var(--safe-area-inset-bottom, 0px) + 8px)
+    calc(var(--safe-area-inset-left, 0px) + 8px);
+}
 .game-layout {
   display: flex;
   gap: 16px;
