@@ -1,9 +1,8 @@
 <template>
   <div class="start-screen column items-center q-pa-xl">
-    <div class="text-h3 q-mb-sm">Парчис</div>
-    <div class="text-subtitle1 text-grey-8 q-mb-xl">1 человек против 3 ИИ</div>
+    <div class="text-h3 q-mb-xl">Парчис</div>
 
-    <div class="row q-gutter-md q-mb-xl">
+    <div class="row q-gutter-md q-mb-xl justify-center">
       <div
         v-for="player in playerStore.players"
         :key="player.ind"
