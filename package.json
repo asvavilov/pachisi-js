@@ -21,14 +21,14 @@
     "@quasar/extras": "^2.0.4",
     "@vue/devtools-api": "^8.2.1",
     "pinia": "^4.0.3",
-    "quasar": "^2.32.2",
+    "quasar": "^2.33.0",
     "vue": "^3.5.42",
     "vue-i18n": "^11.4.10",
     "vue-router": "^5.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@quasar/app-vite": "^3.8.3",
+    "@quasar/app-vite": "^3.9.0",
     "@types/node": "^22.20.2",
     "@vitest/coverage-v8": "^5.0.0",
     "@vue/eslint-config-prettier": "^10.2.0",
