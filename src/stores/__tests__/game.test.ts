@@ -1000,6 +1000,17 @@ describe('game store', () => {
       expect(game.selectedChip).toBe(chip);
     });
 
+    it('повторный клик по выбранной фишке снимает выбор', () => {
+      const { game, playerStore, boardStore, diceStore } = setupGame();
+      game.stateId = GameStateEnum.WAIT_ROLL;
+      const chip = putOnMain(playerStore.players[0]!, boardStore.board, 0, 10);
+      diceStore.items = [3, 4];
+      game.onChipClick(chip);
+      expect(game.selectedChip).toBe(chip);
+      game.onChipClick(chip);
+      expect(game.selectedChip).toBeNull();
+    });
+
     it('с недоступной фишкой — игнорируется', () => {
       const { game, playerStore, boardStore, diceStore } = setupGame();
       game.stateId = GameStateEnum.WAIT_ROLL;

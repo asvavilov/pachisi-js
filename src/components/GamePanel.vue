@@ -58,47 +58,6 @@
     </div>
   </div>
 
-  <q-card v-if="gameStore.selectedChip" class="q-mt-md selected-chip-panel">
-    <q-card-section>
-      <strong>Выбрана фишка</strong> (доска: {{ gameStore.selectedChip.cell?.board.type }})
-      <div
-        v-for="step in gameStore.getPossibleStepsForChip(gameStore.selectedChip)"
-        :key="step"
-        class="q-mt-md"
-      >
-        <div class="text-subtitle2 q-mb-xs">Ход на {{ step }}:</div>
-        <div
-          v-for="(targetCell, idx) in gameStore.findTargetCellVariants(
-            gameStore.selectedChip.cell,
-            step,
-          )"
-          :key="idx"
-          class="q-mt-xs"
-        >
-          <q-btn
-            color="primary"
-            size="sm"
-            @click="gameStore.moveChip(gameStore.selectedChip, step, targetCell)"
-          >
-            Двинуть на {{ step }}
-            <template v-if="targetCell.board.type === BoardType.home">
-              (на финиш, ячейка
-              {{ targetCell.board.cells.indexOf(targetCell) + 1 }})
-            </template>
-            <template v-else> (по основной доске) </template>
-          </q-btn>
-        </div>
-      </div>
-      <q-btn
-        flat
-        color="grey-8"
-        label="Отмена"
-        class="q-mt-md"
-        @click="gameStore.selectedChip = null"
-      />
-    </q-card-section>
-  </q-card>
-
   <!-- Ход при отсутствии возможных ходов переходит автоматически (README п.13). -->
 
   <!-- Debug Panel (только в dev-режиме, 4.6) -->
@@ -106,7 +65,6 @@
 </template>
 
 <script setup lang="ts">
-import { BoardType } from 'src/lib/board';
 import { GameStateEnum } from 'src/lib/GameState';
 import { useGameStore } from 'src/stores/game';
 import { usePlayerStore } from 'src/stores/player';
@@ -134,10 +92,6 @@ const getFirstPlayerIndex = (): number => {
 </script>
 
 <style scoped>
-.selected-chip-panel {
-  background-color: #e8f4fd;
-  border: 1px solid #b3d9ff;
-}
 .legend {
   display: flex;
   flex-wrap: wrap;

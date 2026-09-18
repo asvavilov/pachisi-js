@@ -1151,7 +1151,8 @@ export const useGameStore = defineStore('game', () => {
     // Блокируем выбор фишек на этапе выбора первого игрока
     if (stateId.value === GameStateEnum.SELECT_FIRST) return;
     if (chip && isChipAvailable(chip)) {
-      selectedChip.value = chip;
+      // Повторный клик по выбранной фишке снимает выбор (заменяет кнопку «Отмена»).
+      selectedChip.value = selectedChip.value === chip ? null : chip;
     }
   };
 
