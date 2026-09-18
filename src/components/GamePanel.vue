@@ -42,7 +42,15 @@
     >
       ⚠️ Дубли подряд: {{ gameStore.doublesCount }}/3
       <div v-if="gameStore.doublesCount >= 2" style="font-size: 0.85em; color: red">
-        Следующий дубль вернёт последнюю двинутую фишку на базу (если она не на цветной дорожке)!
+        Третий дубль вернёт последнюю двинутую фишку на базу — но только если второй дубль
+        использован для хода и фишка не на цветной дорожке (п.7).
+      </div>
+    </div>
+
+    <!-- Подсказки правил (README) -->
+    <div v-if="hints.length" class="q-mt-sm">
+      <div v-for="(hint, i) in hints" :key="i" class="hint-row" :style="{ color: hint.color }">
+        {{ hint.text }}
       </div>
     </div>
 
@@ -65,6 +73,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { GameStateEnum } from 'src/lib/GameState';
 import { useGameStore } from 'src/stores/game';
 import { usePlayerStore } from 'src/stores/player';
@@ -75,6 +84,79 @@ const playerStore = usePlayerStore();
 
 /** 4.6: debug-панель нужна только при разработке. */
 const isDev = import.meta.env.DEV;
+
+/**
+ * Подсказки правил по текущему состоянию (README п.4, 6, 7, 8, 10, 12).
+ * Показываются только в игровых состояниях, а не на старте/выборе первого/финише.
+ */
+interface RuleHint {
+  text: string;
+  color: string;
+}
+
+const hints = computed<RuleHint[]>(() => {
+  const state = gameStore.stateId;
+  if (
+    state === GameStateEnum.START ||
+    state === GameStateEnum.SELECT_FIRST ||
+    state === GameStateEnum.FINISH
+  ) {
+    return [];
+  }
+
+  // Дубль, но ходов нет — снова доступен бросок (доп. бросок за дубль, README п.7).
+  if (gameStore.noMovesAddonRoll) {
+    return [
+      {
+        text: '🎲 Ходов нет. Дубль даёт дополнительный бросок — бросайте ещё раз (п.7).',
+        color: '#ef6c00',
+      },
+    ];
+  }
+
+  const list: RuleHint[] = [];
+
+  if (state === GameStateEnum.WAIT_STEP) {
+    // README п.6: правило «+7».
+    if (gameStore.isPlusSevenActive) {
+      list.push({
+        text: '7️⃣ Все 4 фишки в игре + дубль → ход = 7, отсюда «семёрка» вместо значения кубика (п.6).',
+        color: '#6a1b9a',
+      });
+    }
+    // README п.8: барьер + дубль — обязательный ход фишкой барьера.
+    if (gameStore.isBarrierMoveRequired) {
+      list.push({
+        text: '🚧 Есть барьер и выпал дубль — обязаны сдвинуть фишку барьера (п.8).',
+        color: '#c62828',
+      });
+    }
+    // README п.4: выход с базы по сумме 5.
+    if (gameStore.baseExitAvailable) {
+      list.push({
+        text: '🚪 Сумма 5 — можно вывести фишку с базы; при всех 4 в базе выходят сразу две (п.4).',
+        color: '#1565c0',
+      });
+    }
+    // README п.10, 12: бонусные шаги +20 / +10.
+    if (gameStore.currentBonusSteps.length > 0) {
+      const bonuses = [...new Set(gameStore.currentBonusSteps)].map((b) => `+${b}`).join(', ');
+      list.push({
+        text: `➕ Доступен бонус ${bonuses} (сбивание / вход в дом) — продвиньте любую свою фишку (п.10, 12).`,
+        color: '#2e7d32',
+      });
+    }
+    // README п.7: дубль — после хода будет ещё один бросок.
+    if (gameStore.canAddonRollDice) {
+      list.push({
+        text: '🎲 Дубль — после хода будет дополнительный бросок (п.7).',
+        color: '#ef6c00',
+      });
+    }
+  }
+
+  return list;
+});
 
 /**
  * 1.1 Получить индекс первого игрока (с минимальным броском)
@@ -92,6 +174,10 @@ const getFirstPlayerIndex = (): number => {
 </script>
 
 <style scoped>
+.hint-row {
+  font-size: 0.9em;
+  line-height: 1.3;
+}
 .legend {
   display: flex;
   flex-wrap: wrap;

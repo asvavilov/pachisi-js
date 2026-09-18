@@ -108,6 +108,12 @@ export const useGameStore = defineStore('game', () => {
   const doublesCount = ref(0);
 
   /**
+   * README п.7: выпал дубль, но доступных ходов нет — ожидается дополнительный бросок.
+   * Нужен, чтобы UI подсказал игроку, почему снова доступен бросок, а не ход.
+   */
+  const noMovesAddonRoll = ref(false);
+
+  /**
    * README п.7: использовал ли игрок второй дубль для хода.
    * Третий дубль отправляет фишку в базу только если второй дубль был использован для хода.
    */
@@ -133,6 +139,7 @@ export const useGameStore = defineStore('game', () => {
     firstRollResults.value = { 0: 0, 1: 0, 2: 0, 3: 0 };
     firstRollCandidates.value = [0, 1, 2, 3];
     doublesCount.value = 0;
+    noMovesAddonRoll.value = false;
     secondDoubleUsedForMove.value = false;
     lastMovedChip.value = null;
     lastCapturedChipId.value = null;
@@ -213,6 +220,7 @@ export const useGameStore = defineStore('game', () => {
       if (canAddonRollDice.value) {
         debugLogPush('rollDice', 'Нет ходов, но есть доп. бросок → WAIT_ROLL', 'warning');
         prepareAddonRollDice();
+        noMovesAddonRoll.value = true;
         stateId.value = GameStateEnum.WAIT_ROLL;
       } else {
         // README п.13: если ни одно значение кубиков не даёт допустимого хода,
@@ -344,6 +352,7 @@ export const useGameStore = defineStore('game', () => {
     // Сбрасываем бонусы текущего хода
     currentBonusSteps.value = [];
     selectedChip.value = null;
+    noMovesAddonRoll.value = false;
   };
 
   /**
@@ -393,6 +402,13 @@ export const useGameStore = defineStore('game', () => {
   const movableChips = computed(() => getMovableChips());
 
   const hasMovableChips = computed(() => movableChips.value.length > 0);
+
+  /**
+   * README п.4: сейчас можно вывести фишку с базы (среди доступных ходов есть фишка на базе).
+   */
+  const baseExitAvailable = computed(() =>
+    movableChips.value.some((chip) => chip.cell?.board.type === BoardType.base),
+  );
 
   const availableChipIds = computed(() => movableChips.value.map((chip) => chip.id));
 
@@ -780,6 +796,7 @@ export const useGameStore = defineStore('game', () => {
       stateId.value = GameStateEnum.WAIT_STEP;
     } else if (diceStore.isEquals) {
       prepareAddonRollDice();
+      noMovesAddonRoll.value = true;
       stateId.value = GameStateEnum.WAIT_ROLL;
     } else {
       debugLogPush('moveChip', 'Нет ходов → автопереход к следующему игроку (README п.13)', 'info');
@@ -1183,6 +1200,10 @@ export const useGameStore = defineStore('game', () => {
     firstRollCandidates,
     // 1.3 Счётчик дублей
     doublesCount,
+    noMovesAddonRoll,
+    // Подсказки правил
+    isPlusSevenActive,
+    baseExitAvailable,
     // Debug
     debug,
     debugLogPush,
