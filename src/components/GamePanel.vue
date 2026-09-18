@@ -1,13 +1,12 @@
 <template>
   <div class="info-panel q-pa-md q-mb-md" style="background-color: #f0f0f0; border-radius: 8px">
-    <div class="text-subtitle2"><strong>Ход игры:</strong> {{ gameStore.stateId }}</div>
+    <div class="text-subtitle2"><strong>{{ statusText }}</strong></div>
 
     <!-- 1.1 Этап выбора первого игрока -->
-    <div v-if="gameStore.stateId === GameStateEnum.SELECT_FIRST" class="q-mt-md">
-      <div class="text-subtitle2 q-mb-sm">Выбор первого игрока:</div>
+    <div v-if="gameStore.stateId === GameStateEnum.SELECT_FIRST" class="q-mt-sm">
       <div class="q-mb-sm">
         Бросает игрок {{ gameStore.firstRollPlayerIndex }} ({{
-          playerStore.players[gameStore.firstRollPlayerIndex]?.color
+          colorLabel(playerStore.players[gameStore.firstRollPlayerIndex]?.color)
         }})
       </div>
       <div class="q-mb-sm">
@@ -24,14 +23,9 @@
         "
       >
         Победитель выбора: игрок {{ getFirstPlayerIndex() }} ({{
-          playerStore.players[getFirstPlayerIndex()]?.color
+          colorLabel(playerStore.players[getFirstPlayerIndex()]?.color)
         }})
       </div>
-    </div>
-
-    <!-- 4.7: доступные фишки — компактно, вместо отдельного низа панели -->
-    <div v-else class="q-mt-xs">
-      Доступные фишки: <strong>{{ gameStore.movableChips.length }}</strong>
     </div>
 
     <!-- 1.3 Отображение счётчика дублей -->
@@ -84,6 +78,42 @@ const playerStore = usePlayerStore();
 
 /** 4.6: debug-панель нужна только при разработке. */
 const isDev = import.meta.env.DEV;
+
+/** Русские названия цветов игроков. */
+const COLOR_LABELS: Record<string, string> = {
+  yellow: 'жёлтый',
+  blue: 'синий',
+  red: 'красный',
+  green: 'зелёный',
+};
+
+const colorLabel = (color: string | undefined): string =>
+  color ? (COLOR_LABELS[color] ?? color) : '—';
+
+/**
+ * Понятный статус хода вместо технического идентификатора состояния.
+ * Вариант B: всегда указываем цвет действующего игрока и пометку «(ИИ)».
+ */
+const statusText = computed(() => {
+  const state = gameStore.stateId;
+  if (state === GameStateEnum.START) return 'Игра не начата';
+  if (state === GameStateEnum.SELECT_FIRST) return 'Определяем первого игрока';
+  if (state === GameStateEnum.FINISH) return 'Игра завершена';
+
+  const player = gameStore.actingPlayer;
+  const who = `${colorLabel(player?.color)}${player?.ai ? ' (ИИ)' : ''}`;
+
+  switch (state) {
+    case GameStateEnum.WAIT_ROLL:
+      return `Бросок костей: ${who}`;
+    case GameStateEnum.WAIT_STEP:
+      return `Ход: ${who}`;
+    case GameStateEnum.WAIT_PLAYER:
+      return `Переход хода: ${who}`;
+    default:
+      return '';
+  }
+});
 
 /**
  * Подсказки правил по текущему состоянию (README п.4, 6, 7, 8, 10, 12).
